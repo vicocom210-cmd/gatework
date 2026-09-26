@@ -804,3 +804,5 @@ body.intro-lock { overflow: hidden; }
   .lang-switch button { padding: 4px 7px; }
   .brand > span:last-child { display: none; }
 }
+/* Shaffof fon hech qachon ichidagi tugmalardan qisqa bo'lmaydi — kontent ko'paysa, o'zi uzayadi */
+@media (min-width: 1025px) { .nav { min-width: max-content; } }
