@@ -104,3 +104,23 @@ class StampedeTests(TransactionTestCase):
             for t in threads:
                 t.join()
         self.assertEqual(len(calls), 1)
+
+
+class PagesTests(TestCase):
+    def test_about_page_has_scene(self):
+        r = self.client.get("/about/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "data-ascent")
+        self.assertContains(r, "about-scene.js")
+
+    @override_settings(CONTACT_TELEGRAM="gatework_uz", CONTACT_EMAIL="info@gatework.uz")
+    def test_contact_links_rendered(self):
+        r = self.client.get("/")
+        self.assertContains(r, "https://t.me/gatework_uz")
+        self.assertContains(r, "mailto:info@gatework.uz")
+
+    @override_settings(CONTACT_TELEGRAM="", CONTACT_EMAIL="")
+    def test_empty_contacts_hidden(self):
+        r = self.client.get("/")
+        self.assertNotContains(r, "https://t.me/\"")
+        self.assertNotContains(r, "mailto:?")

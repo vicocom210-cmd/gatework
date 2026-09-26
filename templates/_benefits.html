@@ -1,11 +1,13 @@
-<section class="benefits" id="about">
+<section class="benefits{% if hide_intro %} no-intro{% endif %}" id="about">
   <div class="orb" style="left:33%;bottom:-20%;height:18rem;width:18rem;background:var(--accent-2);opacity:.3"></div>
   <div class="wrap inner">
+    {% if not hide_intro %}
     <div class="reveal from-left">
       <span class="eyebrow glass-soft" style="color:var(--primary)" data-t="aboutTag"></span>
       <h2 data-t="aboutTitle"></h2>
       <p class="lead" data-t="aboutText"></p>
     </div>
+    {% endif %}
     <div class="bcards" data-benefits></div>
   </div>
 </section>

@@ -4,20 +4,66 @@
 {% block title %}Biz haqimizda — Gate Work{% endblock %}
 {% block description %}Gate Work rasmiy davlat mehnat portallaridagi vakansiyalarni uch tilda, viza belgilari bilan bir joyga jamlaydi.{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/about.css' %}" />
+{% endblock %}
+
 {% block content %}
-<section class="hero" style="padding-bottom:20px">
-  <div class="aurora"></div>
-  <div class="orb" style="left:-10%;top:0;height:20rem;width:20rem;background:var(--primary)"></div>
-  <div class="wrap" style="max-width:820px">
-    <span class="eyebrow glass-soft reveal" data-t="aboutTag"></span>
-    <h1 class="reveal" style="transition-delay:.1s" data-t="aboutTitle"></h1>
-    <p class="tagline reveal" style="transition-delay:.2s" data-t="aboutText"></p>
+<!--
+  "Yuksalish" sahnasi: sahifa pastga aylantirilganda kamera tog' etagidan
+  bulutlar orqali ko'tarilib, Yer sharigacha chiqadi. Hamma narsa
+  (tog'lar, bulutlar, Yer shari) static/js/about-scene.js'da kod bilan chiziladi.
+-->
+<section class="ascent" data-ascent aria-label="Biz haqimizda">
+  <div class="ascent-stage">
+    <div class="as-sky as-sky-night"></div>
+    <div class="as-sky as-sky-dawn" data-layer="dawn"></div>
+    <div class="as-sky as-sky-mist" data-layer="mist"></div>
+    <div class="as-sky as-sky-storm" data-layer="storm"></div>
+    <div class="as-sky as-sky-space" data-layer="space"><canvas class="as-stars" data-stars></canvas></div>
+    <div class="as-sun" data-layer="sun"></div>
+
+    <svg class="as-mountains" data-mountains viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true"></svg>
+
+    <div class="as-clouds" data-clouds="light" aria-hidden="true"></div>
+    <div class="as-clouds" data-clouds="dark" aria-hidden="true"></div>
+    <div class="as-fog" data-layer="fog"></div>
+
+    <canvas class="as-globe" data-globe aria-hidden="true"></canvas>
+
+    <div class="as-text as-hero on-dark" data-scene="0">
+      <span class="as-eyebrow" data-t="aboutTag"></span>
+      <h1 data-t="aboutTitle"></h1>
+      <p data-t="aboutText"></p>
+    </div>
+    <div class="as-text on-light" data-scene="1">
+      <span class="as-step">01</span>
+      <h2 data-t="ascent1t"></h2>
+      <p data-t="ascent1d"></p>
+    </div>
+    <div class="as-text on-light as-right" data-scene="2">
+      <span class="as-step">02</span>
+      <h2 data-t="ascent2t"></h2>
+      <p data-t="ascent2d"></p>
+    </div>
+    <div class="as-text on-dark" data-scene="3">
+      <span class="as-step">03</span>
+      <h2 data-t="ascent3t"></h2>
+      <p data-t="ascent3d"></p>
+    </div>
+    <div class="as-text on-dark as-final" data-scene="4">
+      <span class="as-step">04</span>
+      <h2 data-t="ascent4t"></h2>
+      <p data-t="ascent4d"></p>
+      <a class="btn-primary big" href="{% url 'index' %}#jobs"><span data-t="ascentCta"></span> →</a>
+    </div>
+
+    <div class="as-hint" data-scene="hint"><span data-t="ascentHint"></span><i></i></div>
+    <div class="as-progress" aria-hidden="true"><i data-ascent-bar></i></div>
   </div>
 </section>
 
-<div data-story></div>
-
-{% include "_benefits.html" %}
+{% include "_benefits.html" with hide_intro=True %}
 
 <section class="logo-reveal">
   <div class="aurora" style="position:absolute;inset:0;z-index:-1"></div>
@@ -31,4 +77,9 @@
     <a class="btn-ghost" href="{% url 'index' %}" data-t="backHome"></a>
   </p>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/globe-dots.js' %}"></script>
+<script src="{% static 'js/about-scene.js' %}"></script>
 {% endblock %}

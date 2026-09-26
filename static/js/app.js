@@ -835,7 +835,36 @@ async function renderAll() {
   renderJobs();
 }
 
+/* ---------- MOBIL MENYU ("☰") va aylantirilganda menyu foni ---------- */
+function initMobileNav() {
+  const outer = document.querySelector(".nav-outer");
+  const nav = document.querySelector(".nav");
+  const btn = document.querySelector("[data-nav-toggle]");
+  if (outer) {
+    const onScroll = () => outer.classList.toggle("scrolled", window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
+  if (!nav || !btn) return;
+  const setOpen = (v) => {
+    nav.classList.toggle("open", v);
+    btn.setAttribute("aria-expanded", String(v));
+  };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setOpen(!nav.classList.contains("open"));
+  });
+  // sahifaga o'tganda yoki chat ochilganda menyu yopiladi
+  nav.addEventListener("click", (e) => {
+    if (e.target.closest(".nav-links a, [data-open-chat], .user-menu .menu a")) setOpen(false);
+  });
+  document.addEventListener("click", (e) => { if (!nav.contains(e.target)) setOpen(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  window.matchMedia("(min-width: 901px)").addEventListener("change", (m) => { if (m.matches) setOpen(false); });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  initMobileNav();
   initTheme();
   initIntro();
   initLang();

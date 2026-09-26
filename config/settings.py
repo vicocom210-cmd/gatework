@@ -96,6 +96,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'pages.context_processors.site',
             ],
         },
     },
@@ -197,6 +198,10 @@ REST_FRAMEWORK = {
 GOOGLE_CLIENT_ID = env(
     "GOOGLE_CLIENT_ID", "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.googleusercontent.com"
 )
+
+# "Admin bilan bog'lanish" menyusi: Telegram (@ belgisisiz) va email
+CONTACT_TELEGRAM = env("CONTACT_TELEGRAM").lstrip("@")
+CONTACT_EMAIL = env("CONTACT_EMAIL")
 
 # To'lov oynasida ko'rsatiladigan karta raqami (/api/plans). Bo'sh bo'lsa — ko'rsatilmaydi.
 PAYMENT_CARD = env("PAYMENT_CARD")

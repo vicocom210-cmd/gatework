@@ -1,0 +1,252 @@
+/* ===== GATE WORK — "Biz haqimizda": yuksalish sahnasi =====
+   Bo'lim balandligi ~7 ekran; ichidagi .ascent-stage ekranga "yopishib"
+   turadi (sticky), qatlamlar esa aylantirishga qarab o'zgaradi
+   (boshqaruvchi kod: static/js/about-scene.js). */
+
+.ascent {
+  position: relative;
+  height: 700vh;
+  background: #0b1424;
+}
+.ascent-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* --- Osmon qatlamlari (ustma-ust, shaffofligi aylantirishga bog'liq) --- */
+.as-sky { position: absolute; inset: 0; opacity: 0; will-change: opacity; }
+.as-sky-night {
+  opacity: 1;
+  background:
+    radial-gradient(70% 55% at 50% 78%, #6d3b3f 0%, rgba(109, 59, 63, 0) 60%),
+    linear-gradient(180deg, #070d1b 0%, #0d1a33 45%, #243452 72%, #4a3a4c 100%);
+}
+.as-sky-dawn {
+  background:
+    radial-gradient(60% 50% at 50% 70%, #ffd6a8 0%, rgba(255, 214, 168, 0) 60%),
+    linear-gradient(180deg, #5b7aa6 0%, #9fb4cf 45%, #e9cdb8 80%, #f3d9c4 100%);
+}
+.as-sky-mist {
+  background: linear-gradient(180deg, #c9d3dc 0%, #dfe5ea 50%, #eef1f3 100%);
+}
+.as-sky-storm {
+  background:
+    radial-gradient(80% 60% at 50% 20%, #56657a 0%, rgba(86, 101, 122, 0) 70%),
+    linear-gradient(180deg, #263140 0%, #37434f 50%, #1d2631 100%);
+}
+.as-sky-space {
+  background:
+    radial-gradient(90% 60% at 50% 110%, #123a52 0%, rgba(18, 58, 82, 0) 60%),
+    linear-gradient(180deg, #02040a 0%, #050b18 60%, #07142a 100%);
+}
+.as-stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.as-sun {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  width: 70vmax;
+  height: 70vmax;
+  margin: -35vmax 0 0 -35vmax;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 190, 130, 0.55) 0%, rgba(255, 150, 110, 0.18) 30%, rgba(255, 150, 110, 0) 60%);
+  opacity: 0;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+/* --- Tog'lar --- */
+.as-mountains {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  will-change: transform, opacity;
+}
+.as-mountains g { transform-origin: 800px 330px; will-change: transform; }
+.as-mountains .day { opacity: var(--day, 0); }
+
+/* --- Bulutlar --- */
+.as-clouds {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+.as-cloud-depth {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 55%;
+  will-change: transform;
+}
+.as-cloud {
+  position: absolute;
+  animation: as-drift var(--dur, 60s) ease-in-out infinite alternate;
+}
+.as-cloud canvas { display: block; width: 100%; height: auto; }
+@keyframes as-drift {
+  from { transform: translateX(calc(var(--dx, 4vw) * -1)); }
+  to { transform: translateX(var(--dx, 4vw)); }
+}
+.as-fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 50%, #f7f9fa 0%, #e8edf1 70%, #dfe5ea 100%);
+  opacity: 0;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+/* --- Yer shari --- */
+.as-globe {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+
+/* --- Matnlar --- */
+.as-text {
+  position: absolute;
+  left: max(20px, 7vw);
+  top: 50%;
+  width: min(560px, calc(100% - 40px));
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity, transform;
+  z-index: 2;
+  /* JS transform'ga qo'shadi: translate(var(--bx), calc(var(--base) + siljish)) */
+  --bx: 0%;
+  --base: -50%;
+}
+.as-text.as-right { left: auto; right: max(20px, 7vw); }
+.as-text h1,
+.as-text h2 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  margin: 0.4rem 0 1rem;
+}
+.as-text h1 { font-size: clamp(2.1rem, 5.2vw, 4.2rem); }
+.as-text h2 { font-size: clamp(1.7rem, 3.6vw, 3rem); }
+.as-text p { font-size: clamp(1rem, 1.4vw, 1.18rem); line-height: 1.65; margin: 0; }
+.as-text.on-dark { color: #f3f7fa; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35); }
+.as-text.on-dark p { color: rgba(236, 243, 247, 0.84); }
+.as-text.on-light { color: #16222e; }
+.as-text.on-light p { color: #3a4b5b; }
+.as-step {
+  display: inline-block;
+  font: 700 0.8rem/1 "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.3em;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.7;
+}
+.as-eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #ffc9a0;
+}
+.as-hero { left: 50%; width: min(860px, calc(100% - 40px)); text-align: center; top: 34%; --bx: -50%; }
+.as-hero p { max-width: 640px; margin: 0 auto; }
+/* matn tog' cho'qqisi ustiga tushganda ham o'qilishi uchun — yumshoq qorong'i fon */
+.as-hero::before {
+  content: "";
+  position: absolute;
+  inset: -18% -12%;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(7, 13, 27, 0.62), rgba(7, 13, 27, 0));
+  pointer-events: none;
+}
+.as-final .btn-primary { display: inline-block; margin-top: 1.6rem; width: auto; padding: 0.9rem 1.8rem; }
+
+/* Pastga suring ko'rsatkichi */
+.as-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: rgba(243, 247, 250, 0.8);
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  z-index: 2;
+}
+.as-hint i {
+  width: 22px;
+  height: 36px;
+  border: 1.5px solid currentColor;
+  border-radius: 12px;
+  position: relative;
+}
+.as-hint i::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 7px;
+  width: 3px;
+  height: 7px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: as-wheel 1.6s ease-in-out infinite;
+}
+@keyframes as-wheel {
+  0% { transform: translateY(0); opacity: 1; }
+  70% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 0; }
+}
+
+/* O'ng tomondagi jarayon chizig'i */
+.as-progress {
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  width: 2px;
+  height: 140px;
+  margin-top: -70px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  z-index: 2;
+  mix-blend-mode: difference;
+}
+.as-progress i {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform-origin: top;
+  transform: scaleY(0);
+}
+
+/* "Biz haqimizda" sahifasida afzalliklar bloki sarlavhasiz — bir ustunda */
+.benefits.no-intro .inner { grid-template-columns: 1fr !important; }
+
+/* --- Telefon --- */
+@media (max-width: 760px) {
+  .ascent { height: 620vh; }
+  .as-text,
+  .as-text.as-right { left: 20px; right: 20px; width: auto; top: 30%; }
+  .as-hero { left: 50%; right: auto; width: calc(100% - 40px); top: 38%; }
+  .as-progress { right: 10px; height: 100px; margin-top: -50px; }
+  .as-final { top: 13%; --base: 0%; }
+}
+
+/* Harakatni kamaytirish so'ralgan bo'lsa — bulutlar suzmaydi */
+@media (prefers-reduced-motion: reduce) {
+  .as-cloud, .as-hint i::after { animation: none; }
+}
