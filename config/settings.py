@@ -51,7 +51,8 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     if not DEBUG:
         raise ImproperlyConfigured("DJANGO_SECRET_KEY o'rnatilmagan (.env faylga qo'shing).")
-    SECRET_KEY = "django-insecure-dev-only-j^4m&&rd&p&s5!%bsaad=$3o9-_(d6nvgy67#v+is23xd1+q0r"
+    # avvalgi kalit bilan bir xil — kompyuterdagi eski login'lar ("Session data corrupted") buzilmasin
+    SECRET_KEY = "django-insecure-j^4m&&rd&p&s5!%bsaad=$3o9-_(d6nvgy67#v+is23xd1+q0r"
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "")
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")

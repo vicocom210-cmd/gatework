@@ -104,3 +104,10 @@ class StampedeTests(TransactionTestCase):
             for t in threads:
                 t.join()
         self.assertEqual(len(calls), 1)
+
+
+class AssetVersionTests(TestCase):
+    def test_css_and_js_links_have_version(self):
+        r = self.client.get("/")
+        self.assertRegex(r.content.decode(), r'/static/css/style\.css\?v=\d+')
+        self.assertRegex(r.content.decode(), r'/static/js/app\.js\?v=\d+')

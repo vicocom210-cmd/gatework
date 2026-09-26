@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static assets %}
 
 {% block title %}Gate Work — Kirish va ro'yxatdan o'tish{% endblock %}
 {% block description %}Gate Work hisobingizga kiring yoki bir daqiqada ro'yxatdan o'ting — xorijdagi rasmiy vakansiyalarni saqlab boring.{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+<link rel="stylesheet" href="{% asset 'css/login.css' %}" />
 {% endblock %}
 
 {% block content %}
@@ -139,5 +139,5 @@
 
 {% block scripts %}
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="{% static 'js/auth.js' %}"></script>
+<script src="{% asset 'js/auth.js' %}"></script>
 {% endblock %}

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static assets %}
 
 {% block title %}Profilni tahrirlash — Gate Work{% endblock %}
 {% block description %}Gate Work profilingizni tahrirlang: rasm, ism-familiya, tug'ilgan kun va o'zingizda bor hujjatlar.{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+<link rel="stylesheet" href="{% asset 'css/login.css' %}" />
 {% endblock %}
 
 {% block content %}
@@ -51,5 +51,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/profile.js' %}"></script>
+<script src="{% asset 'js/profile.js' %}"></script>
 {% endblock %}

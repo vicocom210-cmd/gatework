@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static assets %}
 
 {% block title %}Admin panel — Gate Work{% endblock %}
 {% block description %}Gate Work boshqaruv paneli.{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+<link rel="stylesheet" href="{% asset 'css/login.css' %}" />
 <meta name="robots" content="noindex" />
 {% endblock %}
 
@@ -66,6 +66,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/archive.js' %}"></script>
-<script src="{% static 'js/admin.js' %}"></script>
+<script src="{% asset 'js/archive.js' %}"></script>
+<script src="{% asset 'js/admin.js' %}"></script>
 {% endblock %}

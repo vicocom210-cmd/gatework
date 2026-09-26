@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static assets %}
 
 {% block title %}Mening arxivim — Gate Work{% endblock %}
 {% block description %}Ko'rgan ishlaringiz va topshirgan arizalaringiz tarixi.{% endblock %}
@@ -25,5 +25,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/archive.js' %}"></script>
+<script src="{% asset 'js/archive.js' %}"></script>
 {% endblock %}

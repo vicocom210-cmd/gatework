@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static assets %}
 
 {% block title %}Eng faol foydalanuvchilar — Gate Work{% endblock %}
 {% block description %}Gate Work reytingi: eng faol foydalanuvchilar, ballar bo'yicha.{% endblock %}
@@ -18,5 +18,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/rating.js' %}"></script>
+<script src="{% asset 'js/rating.js' %}"></script>
 {% endblock %}
