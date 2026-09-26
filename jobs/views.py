@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from users.utils import plan_active
-from users.views import CSRFExemptSessionAuthentication
 from .services import get_jobs_page
 from .models import JobEvent
 
@@ -39,8 +38,6 @@ class JobsListView(APIView):
 
 class TrackView(APIView):
     """Eski /api/track ekvivalenti — 'view' yoki 'apply' voqeasini yozadi."""
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def post(self, request):
         user = request.user
         if not user.is_authenticated:
@@ -93,8 +90,6 @@ class ArchiveView(APIView):
 
 
 class ArchiveClearView(APIView):
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def post(self, request):
         user = request.user
         if not user.is_authenticated:

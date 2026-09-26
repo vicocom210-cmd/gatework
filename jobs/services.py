@@ -9,6 +9,7 @@ bo'ladi va keyinchalik buni Celery task'ga o'tkazish ham osonlashadi
 (migratsiya rejamizdagi 2-bosqich, eslaysizmi?).
 """
 import hashlib
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
@@ -229,35 +230,60 @@ SOURCES = {
 }
 PAGE_SIZE = 25        # har bir manbadan bitta so'rovda nechta vakansiya
 MAX_PAGES = 6         # 6 x 25 = har manbadan ko'pi bilan 150 ta (avvalgidek ~300 jami)
-CACHE_SECONDS = 15 * 60
+# 30 daqiqa: serverda "refresh_jobs" har 10 daqiqada asosiy sahifalarni
+# yangilab turadi, shuning uchun foydalanuvchi deyarli doim keshdan oladi.
+CACHE_SECONDS = 30 * 60
+SECTORS = ("all", "medical", "agriculture", "service")
 
 
-def get_jobs_page(country="ALL", query="", sector="all", page=1):
+def _cache_key(code, query, sector, page):
+    return "jobs:" + hashlib.md5(f"{code}|{query}|{sector}|{page}".encode()).hexdigest()
+
+
+def fetch_source_page(code, query="", sector="all", page=1, force=False):
     """
-    Tanlangan davlat(lar) uchun BITTA sahifani qaytaradi: (jobs, has_more).
+    Bitta manbaning bitta sahifasi, kesh orqali: (jobs, has_more).
 
-    - Har bir (manba, so'rov, soha, sahifa) natijasi 15 daqiqaga
-      keshlanadi — sahifa yangilanganda yoki boshqa foydalanuvchi xuddi
-      shu qidiruvni qilganda API'ga qayta murojaat qilinmaydi.
-    - Bir nechta manba PARALLEL so'raladi (ketma-ket emas).
+    MUHIM ("stampede" himoyasi): kesh bo'sh paytda bir vaqtda 500 kishi
+    kirsa, tashqi API'ga 500 ta emas, faqat BITTA so'rov ketadi — qolganlar
+    birinchisi natijani keshga yozguncha kutib turadi.
     """
-    codes = [c for c in SOURCES if country in (c, "ALL")]
-    if not codes or page > MAX_PAGES:
-        return [], False
-
-    def one(code):
-        key = "jobs:" + hashlib.md5(f"{code}|{query.strip().lower()}|{sector}|{page}".encode()).hexdigest()
+    key = _cache_key(code, query, sector, page)
+    if not force:
         cached = cache.get(key)
         if cached is not None:
             return cached
+        if not cache.add(key + ":lock", 1, 20):
+            # boshqa so'rov aynan shu sahifani yuklayapti — 10 soniyagacha kutamiz
+            for _ in range(40):
+                time.sleep(0.25)
+                cached = cache.get(key)
+                if cached is not None:
+                    return cached
+    try:
         jobs, more = SOURCES[code](query=query, sector=sector, page=page, page_size=PAGE_SIZE)
         # Bo'sh natija (ehtimol tarmoq xatosi) keshlanmaydi — keyingi safar qayta uriniladi.
         if jobs:
             cache.set(key, (jobs, more), CACHE_SECONDS)
         return jobs, more
+    finally:
+        cache.delete(key + ":lock")
+
+
+def get_jobs_page(country="ALL", query="", sector="all", page=1):
+    """
+    Tanlangan davlat(lar) uchun BITTA sahifani qaytaradi: (jobs, has_more).
+    Bir nechta manba PARALLEL so'raladi (ketma-ket emas); har biri keshlanadi.
+    """
+    codes = [c for c in SOURCES if country in (c, "ALL")]
+    if not codes or page > MAX_PAGES:
+        return [], False
+    query = " ".join(query.split()).lower()[:100]
+    if sector not in SECTORS:
+        sector = "all"
 
     with ThreadPoolExecutor(max_workers=len(codes)) as pool:
-        results = list(pool.map(one, codes))
+        results = list(pool.map(lambda c: fetch_source_page(c, query, sector, page), codes))
 
     jobs = [j for js, _ in results for j in js]
     has_more = page < MAX_PAGES and any(more for _, more in results)

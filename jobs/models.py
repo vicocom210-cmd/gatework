@@ -23,6 +23,10 @@ class JobEvent(models.Model):
 
     class Meta:
         ordering = ["-id"]
+        indexes = [
+            # arxiv va admin statistikasi uchun
+            models.Index(fields=["user", "kind", "created_at"], name="jobs_event_user_kind_idx"),
+        ]
 
     def to_public(self):
         return {

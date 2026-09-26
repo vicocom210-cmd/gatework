@@ -304,9 +304,13 @@
     if (!window.isLoggedIn || !currentUser || !currentUser.isAdmin) { location.href = "/"; return; }
     await loadStats();
     await loadUsers();
+    // Sahifa yashirin bo'lsa so'ramaymiz; statistika — 20 soniyada bir
+    let tick = 0;
     pollTimer = setInterval(() => {
+      if (document.hidden) return;
+      tick++;
       if (tab === "chat") { loadThreads(); if (currentThread) openThread(currentThread, true); }
-      loadStats();
+      if (tick % 5 === 0) loadStats();
     }, 4000);
   }
 

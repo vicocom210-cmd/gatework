@@ -1,0 +1,11 @@
+.git
+.idea
+.venv
+venv
+**/__pycache__
+*.pyc
+.cache
+media
+staticfiles
+db.sqlite3
+.env

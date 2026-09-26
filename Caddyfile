@@ -1,0 +1,34 @@
+# DOMAIN .env faylidan olinadi, masalan: DOMAIN=gatework.uz
+{$DOMAIN}, www.{$DOMAIN} {
+	encode zstd gzip
+
+	@www host www.{$DOMAIN}
+	redir @www https://{$DOMAIN}{uri} permanent
+
+	handle_path /static/* {
+		root * /srv/static
+		header Cache-Control "public, max-age=604800"
+		file_server
+	}
+
+	handle_path /media/* {
+		root * /srv/media
+		# Foydalanuvchi yuklagan fayllar hech qachon saytimiz nomidan kod ishga tushira olmaydi
+		header X-Content-Type-Options nosniff
+		header Content-Security-Policy "sandbox"
+		file_server
+	}
+
+	handle {
+		reverse_proxy web:8000
+	}
+
+	request_body {
+		max_size 30MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=2592000; includeSubDomains"
+		-Server
+	}
+}

@@ -274,6 +274,20 @@
     }
   }
 
+  /* Polling: chat ochiq — 4 soniyada, yopiq — 15 soniyada bir marta.
+     Sahifa (tab) yashirin bo'lsa — umuman so'ramaymiz. 500+ foydalanuvchida
+     serverga keladigan so'rovlar sonini bir necha barobar kamaytiradi. */
+  function schedulePoll() {
+    clearTimeout(pollTimer);
+    pollTimer = setTimeout(async () => {
+      if (!document.hidden) await pollUnread();
+      schedulePoll();
+    }, open ? 4000 : 15000);
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && pollTimer) { pollUnread(); schedulePoll(); }
+  });
+
   async function pollUnread() {
     if (!window.isLoggedIn || isAdmin()) return;
     if (open) { load(false); return; }
@@ -288,6 +302,7 @@
     box.hidden = false;
     requestAnimationFrame(() => box.classList.toggle("open", v));
     document.querySelector(".chat-fab")?.classList.toggle("active", v);
+    if (pollTimer) schedulePoll(); // ochiq/yopiqqa qarab tezlikni o'zgartiramiz
     if (v) {
       load(!loaded);
       setTimeout(() => input.focus(), 250);
@@ -313,7 +328,7 @@
       if (open) { loaded = false; lastId = 0; load(true); }
       if (window.isLoggedIn && !pollTimer) {
         pollUnread();
-        pollTimer = setInterval(pollUnread, 4000);
+        schedulePoll();
       }
     },
   };

@@ -1,13 +1,25 @@
+import os
+
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Case, Count, F, Max, Q, When
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
 from users.utils import fmt_dt, touch_last_seen, user_public
-from users.views import CSRFExemptSessionAuthentication
 from .models import Message
+
+
+# Chatga yuklash mumkin bo'lgan fayllar (chat.js'dagi "accept" ro'yxati bilan bir xil).
+# MUHIM: .html/.svg/.js kabi fayllar ruxsat etilmaydi — ular saytning o'z
+# domenidan ochilganda boshqa foydalanuvchilar nomidan kod ishga tushirishi mumkin.
+ALLOWED_CHAT_EXTS = {
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
+    ".mp4", ".webm", ".mov", ".m4v", ".mp3", ".m4a", ".ogg", ".wav", ".aac",
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
+    ".zip", ".rar", ".7z",
+}
 
 
 def _is_admin(user):
@@ -19,6 +31,12 @@ def _first_admin_id():
     return row.id if row else None
 
 
+def _staff_ids():
+    """Adminlar ID'lari (ular odatda 1-3 ta). So'rovlarda JOIN o'rniga shu ro'yxat
+    ishlatiladi — katta bazada JOIN + OR PostgreSQL'ni juda sekinlashtiradi."""
+    return list(User.objects.filter(is_staff=True).values_list("id", flat=True))
+
+
 def _thread_q(user_id):
     """
     Foydalanuvchi va ADMINLAR (istalgan is_staff) o'rtasidagi barcha xabarlar.
@@ -28,13 +46,14 @@ def _thread_q(user_id):
     ko'rmasdi, uning javobi esa foydalanuvchiga chiqmasdi. Endi barcha
     adminlar bitta umumiy "qabul qutisi"dan foydalanadi.
     """
-    return (Q(sender_id=user_id, receiver__is_staff=True)
-            | Q(sender__is_staff=True, receiver_id=user_id))
+    staff = _staff_ids()
+    return Q(sender_id=user_id, receiver_id__in=staff) | Q(sender_id__in=staff, receiver_id=user_id)
 
 
 def _unread_for_admins(user_id=None):
     """Oddiy foydalanuvchilardan adminlarga kelgan, hali o'qilmagan xabarlar."""
-    qs = Message.objects.filter(receiver__is_staff=True, sender__is_staff=False, is_read=False)
+    staff = _staff_ids()
+    qs = Message.objects.filter(receiver_id__in=staff, is_read=False).exclude(sender_id__in=staff)
     return qs.filter(sender_id=user_id) if user_id else qs
 
 
@@ -92,8 +111,6 @@ class ChatMessagesView(APIView):
 
 
 class ChatSendView(APIView):
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def post(self, request):
         user = request.user
         if not user.is_authenticated:
@@ -104,6 +121,8 @@ class ChatSendView(APIView):
             return Response({"ok": False, "error": "Xabar bo'sh."}, status=400)
         if file and file.size > settings.CHAT_MAX_UPLOAD:
             return Response({"ok": False, "error": "Fayl hajmi 25 MB dan oshmasligi kerak."}, status=400)
+        if file and os.path.splitext(file.name or "")[1].lower() not in ALLOWED_CHAT_EXTS:
+            return Response({"ok": False, "error": "Bu turdagi faylni yuborib bo'lmaydi."}, status=400)
 
         if user.is_staff:
             try:
@@ -141,21 +160,43 @@ class ChatUnreadView(APIView):
 
 
 class ChatThreadsView(APIView):
-    """Faqat admin uchun: kim bilan yozishma bor."""
+    """
+    Faqat admin uchun: yozishmasi bor foydalanuvchilar, oxirgi xabar bo'yicha.
+
+    MUHIM: avval har bir foydalanuvchi uchun 2 tadan alohida so'rov
+    ketardi (10 000 foydalanuvchi = har 4 soniyada 20 000 so'rov).
+    Endi hammasi 3 ta so'rovda olinadi (yuklama sinovida 5 000 foydalanuvchi
+    va 10 000 xabarda tekshirilgan).
+    """
 
     def get(self, request):
         if not _is_admin(request.user):
             return Response({"ok": False}, status=status.HTTP_403_FORBIDDEN)
+        # Bitta GROUP BY: har bir foydalanuvchi (admin bo'lmagan tomon) bo'yicha
+        # oxirgi xabar va o'qilmaganlar soni. Foydalanuvchilar jadvalini aylanib
+        # chiqmaymiz — faqat xabarlar jadvalidan (5 000 foydalanuvchida ham ms'lar).
+        staff = _staff_ids()
+        from_user = Q(receiver_id__in=staff) & ~Q(sender_id__in=staff)
+        to_user = Q(sender_id__in=staff) & ~Q(receiver_id__in=staff)
+        rows = list(
+            Message.objects.filter(from_user | to_user)
+            .annotate(client=Case(When(sender_id__in=staff, then=F("receiver_id")), default=F("sender_id")))
+            .values("client")
+            .annotate(last_id=Max("id"), unread=Count("id", filter=from_user & Q(is_read=False)))
+            .order_by("-last_id")[:200]
+        )
+        users = User.objects.in_bulk([r["client"] for r in rows])
+        last_msgs = Message.objects.in_bulk([r["last_id"] for r in rows])
         out = []
-        for u in User.objects.filter(is_staff=False):
-            last = Message.objects.filter(_thread_q(u.id)).order_by("-id").first()
-            unread = _unread_for_admins(u.id).count()
+        for r in rows:
+            u, last = users.get(r["client"]), last_msgs.get(r["last_id"])
+            if not u:
+                continue
             # admin.js suhbat sarlavhasida email, tarif, onlayn holati va
             # tahrirlash oynasi uchun to'liq foydalanuvchi ma'lumotini ishlatadi
             item = user_public(u)
-            item["lastText"] = (last.text if last and last.text else (f"📎 {last.attachment_type}" if last else None))
-            item["lastAt"] = fmt_dt(last.created_at) if last else None
-            item["unread"] = unread
+            item["lastText"] = last.text if last.text else f"📎 {last.attachment_type}"
+            item["lastAt"] = fmt_dt(last.created_at)
+            item["unread"] = r["unread"]
             out.append(item)
-        out.sort(key=lambda x: x["lastAt"] or "", reverse=True)
         return Response({"ok": True, "threads": out})

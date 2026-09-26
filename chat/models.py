@@ -18,6 +18,11 @@ class Message(models.Model):
 
     class Meta:
         ordering = ["id"]
+        indexes = [
+            # "o'qilmagan xabarlar" va "suhbat" so'rovlari uchun (chat har bir necha soniyada so'raydi)
+            models.Index(fields=["receiver", "is_read"], name="chat_msg_receiver_read_idx"),
+            models.Index(fields=["sender", "receiver"], name="chat_msg_sender_receiver_idx"),
+        ]
 
     def to_public(self):
         return {

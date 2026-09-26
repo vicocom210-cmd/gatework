@@ -1,0 +1,80 @@
+# Gate Work — butun sayt bitta buyruq bilan:  docker compose up -d --build
+# Sozlamalar .env faylida (namuna: .env.example).
+
+services:
+  web:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://gatework:${POSTGRES_PASSWORD}@db:5432/gatework
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - static:/data/static
+      - media:/data/media
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Har 10 daqiqada vakansiyalar keshini yangilaydi (foydalanuvchilar tashqi API'ni kutmasligi uchun)
+  scheduler:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://gatework:${POSTGRES_PASSWORD}@db:5432/gatework
+      REDIS_URL: redis://redis:6379/0
+    command: ["sh", "-c", "sleep 30; while true; do python manage.py refresh_jobs; sleep 600; done"]
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: gatework
+      POSTGRES_USER: gatework
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gatework"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
+    restart: unless-stopped
+
+  # Caddy — HTTPS sertifikatini (Let's Encrypt) O'ZI oladi va yangilaydi,
+  # statik fayllar va rasmlarni beradi, qolgan so'rovlarni Django'ga uzatadi.
+  caddy:
+    image: caddy:2-alpine
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - static:/srv/static:ro
+      - media:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  static:
+  media:
+  caddy_data:
+  caddy_config:

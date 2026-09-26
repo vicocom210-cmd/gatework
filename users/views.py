@@ -4,30 +4,20 @@ from datetime import date, datetime, timedelta
 import requests
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
-from django.db.models import Count, Q
+from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from chat.models import Message
+from jobs.models import JobEvent
+
 from .models import User
 from .serializers import RegisterSerializer
+from .security import enforce_csrf, rate_limit
 from .utils import save_avatar, touch_last_seen, user_public
-
-
-class CSRFExemptSessionAuthentication(SessionAuthentication):
-    """
-    Oddiy SessionAuthentication — FAQAT bitta farq bilan: CSRF
-    tekshiruvini o'chiradi. Bu bizga ikkalasini ham beradi:
-    (1) request.user haqiqiy tizimga kirgan foydalanuvchini ko'rsatadi
-        (authentication_classes=[] bo'lsa, bu doim "Anonim" bo'lib
-        qolar edi — bu esa admin tekshiruvini buzardi);
-    (2) eski auth.js/admin.js CSRF token yubormasa ham, so'rov
-        403 bilan rad etilmaydi.
-    """
-    def enforce_csrf(self, request):
-        return  # hech narsa qilmaymiz — tekshiruvni o'tkazib yuboramiz
 
 
 def _first_error(errors):
@@ -61,13 +51,10 @@ def _parse_assets(raw):
 
 
 class RegisterView(APIView):
-    # MUHIM (VAQTINCHA): DRF'ning SessionAuthentication'i har doim
-    # o'zining ICHKI CSRF tekshiruvini bajaradi — bu @csrf_exempt
-    # dekoratoriga BO'YSUNMAYDI (buni tajriba bilan aniqladik!).
-    # Shuning uchun aynan shu ochiq (login/register/logout) view'lar
-    # uchun autentifikatsiya sinflarini bo'shatib qo'yamiz — bu
-    # Flask'dagi ASL xavfsizlik darajasi bilan bir xil. Xavfsizlik
-    # bosqichida (keyinroq) buni to'g'ri yechimga almashtiramiz.
+    # MUHIM: bu ochiq (login/register/logout) view'larda foydalanuvchi
+    # hali kirmagan bo'lishi mumkin — DRF bunday holda CSRF'ni o'zi
+    # tekshirmaydi. Shuning uchun enforce_csrf()ni qo'lda chaqiramiz.
+    # Token'ni frontend X-CSRFToken sarlavhasida yuboradi (base.html).
     authentication_classes = []
     """
     Eski Flask'dagi @app.route("/api/register", methods=["POST"]) ning
@@ -75,6 +62,8 @@ class RegisterView(APIView):
     darhol tizimga kiritiladi (auth.js shundan keyin sahifani o'zgartiradi).
     """
     def post(self, request):
+        enforce_csrf(request)
+        rate_limit(request, "register", 10, 3600)
         serializer = RegisterSerializer(data=request.data)
         if not serializer.is_valid():
             return Response({"ok": False, "error": _first_error(serializer.errors), "errors": serializer.errors},
@@ -100,8 +89,11 @@ class LoginView(APIView):
     authenticate() ga email'ni username sifatida beramiz.
     """
     def post(self, request):
+        enforce_csrf(request)
         email = (request.data.get("email") or "").strip()
         password = request.data.get("password") or ""
+        # parolni taxmin qilib buzishdan himoya: IP+email bo'yicha 15 daqiqada 10 ta urinish
+        rate_limit(request, "login", 10, 900, extra=email)
 
         user = authenticate(request, username=email, password=password)
         if user is None and email.lower() != email:
@@ -120,6 +112,7 @@ class LogoutView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        enforce_csrf(request)
         logout(request)
         return Response({"ok": True})
 
@@ -135,8 +128,6 @@ class MeView(APIView):
 
 class ProfileView(APIView):
     """Eski /api/profile — foydalanuvchi o'z profilini tahrirlaydi (profile.js)."""
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def post(self, request):
         u = request.user
         if not u.is_authenticated:
@@ -202,8 +193,6 @@ class PlansView(APIView):
 
 class ActivityView(APIView):
     """Eski /api/activity — foydalanuvchi faolligi (masalan qidiruv). Hozircha faqat last_seen yangilanadi."""
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def post(self, request):
         if not request.user.is_authenticated:
             return Response({"ok": False}, status=status.HTTP_401_UNAUTHORIZED)
@@ -220,6 +209,8 @@ class GoogleVerifyView(APIView):
     authentication_classes = []
 
     def post(self, request):
+        enforce_csrf(request)
+        rate_limit(request, "google", 30, 3600)
         credential = request.data.get("credential") or ""
         if not credential:
             return Response({"ok": False, "error": "Token yo'q."}, status=400)
@@ -259,13 +250,23 @@ def _is_admin(user):
     return user.is_authenticated and user.is_staff
 
 
+def _count_subquery(qs):
+    return Coalesce(Subquery(qs.order_by().values("user_id" if qs.model is JobEvent else "sender_id")
+                             .annotate(n=Count("id")).values("n")[:1]), 0)
+
+
 def _with_counts(qs):
-    """Har bir foydalanuvchiga arizalar, ko'rishlar va o'qilmagan xabarlar sonini qo'shadi."""
+    """
+    Har bir foydalanuvchiga arizalar, ko'rishlar va o'qilmagan xabarlar sonini
+    qo'shadi. Alohida ichki so'rovlar (subquery) bilan — JOIN qilinsa, jadvallar
+    bir-biriga ko'payib, katta bazada juda sekinlashadi.
+    """
     return qs.annotate(
-        n_applies=Count("job_events", filter=Q(job_events__kind="apply"), distinct=True),
-        n_views=Count("job_events", filter=Q(job_events__kind="view"), distinct=True),
-        n_unread=Count("sent_messages", filter=Q(sent_messages__receiver__is_staff=True, sent_messages__is_read=False,
-                                                 is_staff=False), distinct=True),
+        n_applies=_count_subquery(JobEvent.objects.filter(user_id=OuterRef("pk"), kind="apply")),
+        n_views=_count_subquery(JobEvent.objects.filter(user_id=OuterRef("pk"), kind="view")),
+        n_unread=_count_subquery(Message.objects.filter(sender_id=OuterRef("pk"), is_read=False,
+                                                        receiver_id__in=list(User.objects.filter(is_staff=True)
+                                                                             .values_list("id", flat=True)))),
     )
 
 
@@ -278,8 +279,6 @@ def _admin_user_public(u):
 
 
 class AdminUsersListView(APIView):
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def get(self, request):
         if not _is_admin(request.user):
             return Response({"ok": False}, status=status.HTTP_403_FORBIDDEN)
@@ -287,13 +286,13 @@ class AdminUsersListView(APIView):
         qs = User.objects.all().order_by("-date_joined")
         if q:
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
-        out = [_admin_user_public(u) for u in _with_counts(qs)]
-        return Response({"ok": True, "users": out, "total": len(out)})
+        total = qs.count()
+        # ko'pi bilan 300 ta (eng yangilari) — qolganini qidiruv orqali topish mumkin
+        out = [_admin_user_public(u) for u in _with_counts(qs)[:300]]
+        return Response({"ok": True, "users": out, "total": total})
 
 
 class AdminUserDetailView(APIView):
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def get_object(self, request, uid):
         return _with_counts(User.objects.filter(id=uid)).first()
 
@@ -400,14 +399,10 @@ class AdminUserDetailView(APIView):
 
 
 class AdminStatsView(APIView):
-    authentication_classes = [CSRFExemptSessionAuthentication]
-
     def get(self, request):
         if not _is_admin(request.user):
             return Response({"ok": False}, status=status.HTTP_403_FORBIDDEN)
-        from chat.models import Message
-        from jobs.models import JobEvent
-
+        staff = list(User.objects.filter(is_staff=True).values_list("id", flat=True))
         now = timezone.now()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         return Response({
@@ -418,6 +413,6 @@ class AdminStatsView(APIView):
             "max": User.objects.filter(plan="max").count(),
             "applies": JobEvent.objects.filter(kind="apply").count(),
             "views": JobEvent.objects.filter(kind="view").count(),
-            "unread": Message.objects.filter(receiver__is_staff=True, sender__is_staff=False, is_read=False).count(),
+            "unread": Message.objects.filter(receiver_id__in=staff, is_read=False).exclude(sender_id__in=staff).count(),
             "online": User.objects.filter(last_seen__gte=now - timedelta(minutes=5)).count(),
         })
