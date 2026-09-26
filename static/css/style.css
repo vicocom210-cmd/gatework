@@ -777,3 +777,30 @@ body.intro-lock { overflow: hidden; }
 .att-file .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .att-file .ico { font-size: 1.3rem; }
 .thread .chat-form .chat-tool { width: 2.5rem; height: 2.5rem; }
+/* ===== MENYU: hamma narsa chegaraning ichida, bir qatorda =====
+   Avval elementlar 1140px ga sig'masdi: "Ro'yxatdan o'tish" chegaradan
+   chiqib ketar, "Bosh sahifa" va "SEK/€" ikki qatorga bo'linardi. */
+.nav { max-width: 1320px; gap: 10px; }
+.nav > * { flex-shrink: 0; }
+.nav-links a,
+.lang-switch button,
+.nav-auth a,
+.contact-btn { white-space: nowrap; }
+.nav-links a { padding: 6px 14px; }
+.nav-right { gap: 6px; }
+.nav-auth .btn-ghost { padding: 7px 14px; }
+.nav-auth .btn-primary { padding: 8px 16px; }
+
+/* O'rta ekranlar: "Admin bilan bog'lanish" — faqat belgi, orada joy ixchamroq */
+@media (max-width: 1440px) {
+  .contact-btn .txt { display: none; }
+  .contact-btn .ico { display: inline; }
+  .contact-btn { padding: 0.32rem 0.55rem; }
+  .contact-pop { right: -4rem; width: min(19rem, calc(100vw - 2rem)); }
+}
+@media (max-width: 1120px) {
+  .nav { padding: 8px 10px; gap: 8px; }
+  .nav-links a { padding: 6px 10px; font-size: 13px; }
+  .lang-switch button { padding: 4px 7px; }
+  .brand > span:last-child { display: none; }
+}
