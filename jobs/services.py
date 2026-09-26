@@ -8,20 +8,32 @@ mantiq esa alohida faylda (services.py) tursin. Shunda kod tartibli
 bo'ladi va keyinchalik buni Celery task'ga o'tkazish ham osonlashadi
 (migratsiya rejamizdagi 2-bosqich, eslaysizmi?).
 """
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+
 import requests
+from django.core.cache import cache
 
 SECTOR_TO_DE_KEYWORD = {"medical": "Pflege", "agriculture": "Landwirtschaft", "service": "Service"}
 ALL_SECTORS_DE_KEYWORDS = " ".join(SECTOR_TO_DE_KEYWORD.values())
 
 
-def fetch_bundesagentur_jobs(query="", sector="all"):
+DE_API_URLS = (
+    "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs",
+    "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
+)
+# Qaysi versiya ishlagani eslab qolinadi — aks holda har sahifada avval
+# ishlamaydigan manzil sinab ko'rilib, har safar vaqt yo'qotilar edi.
+_de_working_url = None
+
+
+def fetch_bundesagentur_jobs(query="", sector="all", page=1, page_size=25):
     """
     Germaniya — Bundesagentur für Arbeit Jobsuche API (bepul, ochiq).
-    Bu — eski Flask kodimizning deyarli AYNAN o'zi, faqat endi
-    Django loyihasi ichida turibdi.
+    Faqat BITTA sahifani oladi (butun natijani emas) — shunda birinchi
+    vakansiyalar bir necha soniyada chiqadi. Qaytaradi: (jobs, has_more).
     """
-    MAX_PAGES = 3
-    PAGE_SIZE = 100
+    global _de_working_url
 
     if sector in SECTOR_TO_DE_KEYWORD:
         search_text = f"{query} {SECTOR_TO_DE_KEYWORD[sector]}".strip()
@@ -29,41 +41,34 @@ def fetch_bundesagentur_jobs(query="", sector="all"):
         search_text = query.strip() or ALL_SECTORS_DE_KEYWORDS
 
     headers = {"X-API-Key": "jobboerse-jobsuche"}
-    all_items = []
+    params = {
+        "angebotsart": "1",
+        "was": search_text,
+        "wo": "Deutschland",
+        "pav": "false",
+        "size": page_size,
+        "page": page,
+    }
+    urls = [_de_working_url] if _de_working_url else []
+    urls += [u for u in DE_API_URLS if u != _de_working_url]
 
-    for page in range(1, MAX_PAGES + 1):
-        params = {
-            "angebotsart": "1",
-            "was": search_text,
-            "wo": "Deutschland",
-            "pav": "false",
-            "size": PAGE_SIZE,
-            "page": page,
-        }
-        data = None
-        for version_url in (
-            "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs",
-            "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
-        ):
-            try:
-                res = requests.get(version_url, headers=headers, params=params, timeout=8)
-                res.raise_for_status()
-                data = res.json()
-                break
-            except Exception as e:
-                print(f"[Bundesagentur xatosi — {page}-sahifa] {e}")
-        if data is None:
+    data = None
+    for version_url in urls:
+        try:
+            res = requests.get(version_url, headers=headers, params=params, timeout=8)
+            res.raise_for_status()
+            data = res.json()
+            _de_working_url = version_url
             break
+        except Exception as e:
+            print(f"[Bundesagentur xatosi — {page}-sahifa] {e}")
+    if data is None:
+        return [], False
 
-        page_items = data.get("stellenangebote", [])
-        if not page_items:
-            break
-        all_items += page_items
-        if len(page_items) < PAGE_SIZE:
-            break
+    items = data.get("stellenangebote", []) or []
 
     jobs = []
-    for item in all_items:
+    for item in items:
         title = item.get("titel") or "—"
         ref_id = item.get("hashId") or item.get("referenznummer") or ""
         apply_url = item.get("externeUrl") or f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref_id}"
@@ -86,52 +91,41 @@ def fetch_bundesagentur_jobs(query="", sector="all"):
             "sourceName": "Bundesagentur für Arbeit",
             "sourceUrl": apply_url,
         })
-    return jobs
+    return jobs, len(items) >= page_size
 
 
-def fetch_arbetsformedlingen_jobs(query="", sector="all"):
+def fetch_arbetsformedlingen_jobs(query="", sector="all", page=1, page_size=25):
     """
     Shvetsiya — Arbetsförmedlingen (JobSearch/JobTech) API, bepul,
-    ochiq va RASMIY. Sizning tarmog'ingizda bu manba ISHLAYDI.
+    ochiq va RASMIY. Faqat BITTA sahifani oladi. Qaytaradi: (jobs, has_more).
     """
-    MAX_PAGES = 3
-    PAGE_SIZE = 100
-
     sector_keyword = {"medical": "vård", "agriculture": "jordbruk", "service": "service"}.get(sector, "")
     search_text = f"{query} {sector_keyword}".strip() or sector_keyword
+    offset = (page - 1) * page_size
 
-    all_hits = []
-    for page in range(MAX_PAGES):
-        offset = page * PAGE_SIZE
-        data = None
-        # Tarmoq vaqti-vaqti bilan uzilib qolishi mumkin — shuning
-        # uchun har bir sahifani taslim bo'lishdan oldin yana bir
-        # marta qayta so'raymiz.
-        for attempt in range(2):
-            try:
-                res = requests.get(
-                    "https://jobsearch.api.jobtechdev.se/search",
-                    params={"q": search_text, "limit": PAGE_SIZE, "offset": offset},
-                    headers={"accept": "application/json"},
-                    timeout=8,
-                )
-                res.raise_for_status()
-                data = res.json()
-                break
-            except Exception as e:
-                print(f"[Arbetsförmedlingen xatosi — {offset}-offset, {attempt + 1}-urinish] {e}")
-        if data is None:
+    data = None
+    # Tarmoq vaqti-vaqti bilan uzilib qolishi mumkin — shuning
+    # uchun taslim bo'lishdan oldin yana bir marta qayta so'raymiz.
+    for attempt in range(2):
+        try:
+            res = requests.get(
+                "https://jobsearch.api.jobtechdev.se/search",
+                params={"q": search_text, "limit": page_size, "offset": offset},
+                headers={"accept": "application/json"},
+                timeout=8,
+            )
+            res.raise_for_status()
+            data = res.json()
             break
+        except Exception as e:
+            print(f"[Arbetsförmedlingen xatosi — {offset}-offset, {attempt + 1}-urinish] {e}")
+    if data is None:
+        return [], False
 
-        hits = data.get("hits", [])
-        if not hits:
-            break
-        all_hits += hits
-        if len(hits) < PAGE_SIZE:
-            break
+    hits = data.get("hits", []) or []
 
     jobs = []
-    for item in all_hits:
+    for item in hits:
         title = item.get("headline") or "—"
         employer = (item.get("employer") or {}).get("name") or "Noma'lum"
         workplace = item.get("workplace_address") or {}
@@ -153,4 +147,45 @@ def fetch_arbetsformedlingen_jobs(query="", sector="all"):
             "sourceName": "Arbetsförmedlingen",
             "sourceUrl": apply_url,
         })
-    return jobs
+    return jobs, len(hits) >= page_size
+
+
+SOURCES = {
+    "DE": fetch_bundesagentur_jobs,
+    "SE": fetch_arbetsformedlingen_jobs,
+}
+PAGE_SIZE = 25        # har bir manbadan bitta so'rovda nechta vakansiya
+MAX_PAGES = 6         # 6 x 25 = har manbadan ko'pi bilan 150 ta (avvalgidek ~300 jami)
+CACHE_SECONDS = 15 * 60
+
+
+def get_jobs_page(country="ALL", query="", sector="all", page=1):
+    """
+    Tanlangan davlat(lar) uchun BITTA sahifani qaytaradi: (jobs, has_more).
+
+    - Har bir (manba, so'rov, soha, sahifa) natijasi 15 daqiqaga
+      keshlanadi — sahifa yangilanganda yoki boshqa foydalanuvchi xuddi
+      shu qidiruvni qilganda API'ga qayta murojaat qilinmaydi.
+    - Bir nechta manba PARALLEL so'raladi (ketma-ket emas).
+    """
+    codes = [c for c in SOURCES if country in (c, "ALL")]
+    if not codes or page > MAX_PAGES:
+        return [], False
+
+    def one(code):
+        key = "jobs:" + hashlib.md5(f"{code}|{query.strip().lower()}|{sector}|{page}".encode()).hexdigest()
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        jobs, more = SOURCES[code](query=query, sector=sector, page=page, page_size=PAGE_SIZE)
+        # Bo'sh natija (ehtimol tarmoq xatosi) keshlanmaydi — keyingi safar qayta uriniladi.
+        if jobs:
+            cache.set(key, (jobs, more), CACHE_SECONDS)
+        return jobs, more
+
+    with ThreadPoolExecutor(max_workers=len(codes)) as pool:
+        results = list(pool.map(one, codes))
+
+    jobs = [j for js, _ in results for j in js]
+    has_more = page < MAX_PAGES and any(more for _, more in results)
+    return jobs, has_more

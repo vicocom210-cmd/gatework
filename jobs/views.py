@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from users.views import CSRFExemptSessionAuthentication
-from .services import fetch_bundesagentur_jobs, fetch_arbetsformedlingen_jobs
+from .services import get_jobs_page
 from .models import JobEvent
 
 
@@ -19,23 +19,31 @@ def _plan_active(user):
 
 
 class JobsListView(APIView):
-    """Eski Flask'dagi @app.route("/api/jobs") ekvivalenti (hozircha soddalashtirilgan)."""
+    """
+    Eski Flask'dagi @app.route("/api/jobs") ekvivalenti.
+
+    ?page=N berilsa — faqat N-sahifani {"jobs": [...], "page": N,
+    "hasMore": bool} ko'rinishida qaytaradi (app.js vakansiyalarni
+    shu tarzda bo'lib-bo'lib yuklaydi, shuning uchun birinchilari
+    darhol chiqadi). page berilmasa — eski format: 1-sahifa massiv sifatida.
+    """
 
     def get(self, request):
         query = request.query_params.get("query", "")
         sector = request.query_params.get("sector", "all")
         country = request.query_params.get("country", "ALL")
+        raw_page = request.query_params.get("page")
+        try:
+            page = max(1, int(raw_page or 1))
+        except ValueError:
+            page = 1
 
-        jobs = []
-        if country in ("DE", "ALL"):
-            jobs += fetch_bundesagentur_jobs(query=query, sector=sector)
-        if country in ("SE", "ALL"):
-            jobs += fetch_arbetsformedlingen_jobs(query=query, sector=sector)
+        jobs, has_more = get_jobs_page(country=country, query=query, sector=sector, page=page)
 
-        # MUHIM: eski static/js/app.js javobni TO'G'RIDAN-TO'G'RI massiv
-        # sifatida kutadi ({"count":...,"jobs":[...]} emas) — shuning
-        # uchun to'g'ridan-to'g'ri ro'yxatni qaytaramiz.
-        return Response(jobs)
+        if raw_page is None:
+            # MUHIM: eski app.js javobni TO'G'RIDAN-TO'G'RI massiv sifatida kutgan.
+            return Response(jobs)
+        return Response({"jobs": jobs, "page": page, "hasMore": has_more})
 
 
 class TrackView(APIView):

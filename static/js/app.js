@@ -310,7 +310,38 @@ function renderFilters() {
   renderAssetFilter();
 }
 
-async function fetchJobsFromServer() {
+/* ---------- VAKANSIYALAR: bo'lib-bo'lib yuklash + brauzer keshi ----------
+   Server vakansiyalarni sahifalab (?page=N) beradi. Birinchi sahifa kelishi
+   bilan kartalar chiziladi, qolganlari orqadan qo'shilib boradi.
+   Natija localStorage'da saqlanadi: sahifa yangilanganda vakansiyalar
+   darhol qayta chiqadi va yuklash to'xtagan joyidan davom etadi. */
+const LS_JOBS = "gatework-jobs-v1";
+const JOBS_CACHE_MS = 15 * 60 * 1000;
+let jobsList = [];
+let jobsById = {};
+let jobsKey = null;       // hozir ko'rsatilayotgan qidiruv (davlat|soha|so'z)
+let jobsLoading = false;
+let jobsAbort = null;
+
+function jobsQueryKey() {
+  return [state.country === "all" ? "ALL" : state.country, state.sector, (state.query || "").trim().toLowerCase()].join("|");
+}
+
+function readJobsCache(key) {
+  try {
+    const c = JSON.parse(localStorage.getItem(LS_JOBS) || "null");
+    if (c && c.key === key && Date.now() - c.at < JOBS_CACHE_MS && Array.isArray(c.jobs)) return c;
+  } catch {}
+  return null;
+}
+
+function writeJobsCache(key, jobs, nextPage, at) {
+  try {
+    localStorage.setItem(LS_JOBS, JSON.stringify({ key, at: at || Date.now(), jobs, nextPage }));
+  } catch {}
+}
+
+async function fetchJobsPage(page, signal) {
   const params = new URLSearchParams({
     country: state.country === "all" ? "ALL" : state.country,
     sector: state.sector,
@@ -322,15 +353,11 @@ async function fetchJobsFromServer() {
     payMax: state.payMax,
     assets: myAssets.join(","),
     lang: lang,
+    page: String(page),
   });
-  try {
-    const res = await fetch(`/api/jobs?${params.toString()}`);
-    if (!res.ok) return [];
-    return await res.json();
-  } catch (e) {
-    console.error("Vakansiyalarni olishda xatolik:", e);
-    return [];
-  }
+  const res = await fetch(`/api/jobs?${params.toString()}`, { signal });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
 function formatSalary(job) {
@@ -355,52 +382,37 @@ function assetLabel(key) {
   return found ? `${found.icon} ${t(found.label)}` : key;
 }
 
-async function renderJobs() {
-  const grid = document.querySelector("[data-jobs]");
-  if (!grid) return;
-  grid.innerHTML = `<p class="empty glass-soft">${t("loading") || "..."}</p>`;
-
-  const jobs = await fetchJobsFromServer();
-
-  const countEl = document.querySelector("[data-count]");
-  if (countEl) countEl.innerHTML = `<b>${jobs.length}</b> ${t("resultsCount")}`;
-
-  if (!jobs.length) {
-    grid.innerHTML = `<p class="empty glass-soft">${t("empty")}</p>`;
-    return;
-  }
-
-  grid.innerHTML = jobs
-    .map((job, i) => {
-      const c = COUNTRIES.find((x) => x.code === job.country);
-      const reqs = (job.requirements || [])
-        .map((r) => `<span class="req ${myAssets.includes(r) ? "match" : ""}">${myAssets.includes(r) ? "✓ " : ""}${assetLabel(r)}</span>`)
-        .join("");
-      return `
-      <article class="card glass" data-job-id="${job.id}" style="animation-delay:${Math.min(i * 0.05, 0.3)}s">
-        <div class="card-top">
-          <div>
-            <h3>${tl(job.title)}</h3>
-            <p class="employer">${job.employer}</p>
-          </div>
-          <span class="flag">${c ? c.flag : ""}</span>
-        </div>
-        <div class="meta">
-          <span><b>◉</b> ${job.city}, ${c ? tl(c.name) : job.country}</span>
-          <span class="pay">${formatSalary(job)}</span>
-        </div>
-        <p class="desc">${tl(job.desc) || ""}</p>
-        <div class="tags">${(job.tags || []).map((tag) => `<span>${tl(VISA_TAGS[tag])}</span>`).join("")}</div>
-        ${reqs ? `<div class="reqs"><em>${t("needs")}:</em>${reqs}</div>` : ""}
-        <div class="card-foot">
-          <span>${t("source")}: ${job.sourceName}</span>
-          <a class="btn-apply" title="${t("applyHint")}" href="${canApply() ? job.sourceUrl : "#"}" ${canApply() ? 'target="_blank" rel="noopener noreferrer" data-apply' : isLoggedIn ? 'data-need-plan' : `data-need-login="${encodeURIComponent(job.sourceUrl)}"`}>${canApply() ? "" : "🔒 "}${t("applyNow")} ↗</a>
-        </div>
-      </article>`;
-    })
+function jobCardHtml(job, i) {
+  const c = COUNTRIES.find((x) => x.code === job.country);
+  const reqs = (job.requirements || [])
+    .map((r) => `<span class="req ${myAssets.includes(r) ? "match" : ""}">${myAssets.includes(r) ? "✓ " : ""}${assetLabel(r)}</span>`)
     .join("");
+  return `
+  <article class="card glass" data-job-id="${job.id}" style="animation-delay:${Math.min(i * 0.06, 1.2)}s">
+    <div class="card-top">
+      <div>
+        <h3>${tl(job.title)}</h3>
+        <p class="employer">${job.employer}</p>
+      </div>
+      <span class="flag">${c ? c.flag : ""}</span>
+    </div>
+    <div class="meta">
+      <span><b>◉</b> ${job.city}, ${c ? tl(c.name) : job.country}</span>
+      <span class="pay">${formatSalary(job)}</span>
+    </div>
+    <p class="desc">${tl(job.desc) || ""}</p>
+    <div class="tags">${(job.tags || []).map((tag) => `<span>${tl(VISA_TAGS[tag])}</span>`).join("")}</div>
+    ${reqs ? `<div class="reqs"><em>${t("needs")}:</em>${reqs}</div>` : ""}
+    <div class="card-foot">
+      <span>${t("source")}: ${job.sourceName}</span>
+      <a class="btn-apply" title="${t("applyHint")}" href="${canApply() ? job.sourceUrl : "#"}" ${canApply() ? 'target="_blank" rel="noopener noreferrer" data-apply' : isLoggedIn ? 'data-need-plan' : `data-need-login="${encodeURIComponent(job.sourceUrl)}"`}>${canApply() ? "" : "🔒 "}${t("applyNow")} ↗</a>
+    </div>
+  </article>`;
+}
 
-  grid.querySelectorAll("[data-need-login]").forEach((a) => {
+/* Kartalarga hodisalarni ulaydi (faqat root ichidagi yangi kartalarga). */
+function bindJobCards(root) {
+  root.querySelectorAll("[data-need-login]").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
       const redirect = encodeURIComponent(decodeURIComponent(a.dataset.needLogin));
@@ -409,25 +421,133 @@ async function renderJobs() {
   });
 
   // TARIF: PRO/MAX bo'lmasa — to'lov oynasi
-  grid.querySelectorAll("[data-need-plan]").forEach((a) => {
+  root.querySelectorAll("[data-need-plan]").forEach((a) => {
     a.addEventListener("click", (e) => { e.preventDefault(); openPlanModal(); });
   });
 
   // ARXIV: ariza bosilganda 'apply', kartaga qaralganda (1.2s) yoki bosilganda 'view'
-  const byId = Object.fromEntries(jobs.map((j) => [j.id, j]));
-  grid.querySelectorAll("[data-apply]").forEach((a) => {
+  root.querySelectorAll("[data-apply]").forEach((a) => {
     a.addEventListener("click", () => {
       const card = a.closest("[data-job-id]");
-      track("apply", byId[card && card.dataset.jobId]);
+      track("apply", jobsById[card && card.dataset.jobId]);
     });
   });
-  grid.querySelectorAll("[data-job-id]").forEach((card) => {
+  root.querySelectorAll("[data-job-id]").forEach((card) => {
     let timer;
-    const job = byId[card.dataset.jobId];
+    const job = jobsById[card.dataset.jobId];
     card.addEventListener("mouseenter", () => { timer = setTimeout(() => track("view", job), 1200); });
     card.addEventListener("mouseleave", () => clearTimeout(timer));
     card.addEventListener("click", (e) => { if (!e.target.closest("a")) track("view", job); });
   });
+}
+
+function paintJobsStatus() {
+  const grid = document.querySelector("[data-jobs]");
+  if (!grid) return;
+  const countEl = document.querySelector("[data-count]");
+  if (countEl) countEl.innerHTML = `<b>${jobsList.length}</b> ${t("resultsCount")}${jobsLoading && jobsList.length ? " …" : ""}`;
+  let more = grid.querySelector("[data-jobs-more]");
+  if (jobsLoading) {
+    if (!more) {
+      more = document.createElement("p");
+      more.className = "empty glass-soft";
+      more.setAttribute("data-jobs-more", "");
+      grid.appendChild(more);
+    }
+    more.textContent = jobsList.length ? t("jobsLoadingMore") : t("jobsLoading");
+  } else if (more) {
+    more.remove();
+  }
+  const empty = grid.querySelector("[data-jobs-empty]");
+  if (!jobsLoading && !jobsList.length) {
+    if (!empty) grid.innerHTML = `<p class="empty glass-soft" data-jobs-empty>${t("empty")}</p>`;
+  } else if (empty) {
+    empty.remove();
+  }
+}
+
+/* Butun ro'yxatni qaytadan chizadi (til / valyuta / tarif o'zgarganda). */
+function paintJobs() {
+  const grid = document.querySelector("[data-jobs]");
+  if (!grid) return;
+  grid.innerHTML = jobsList.map(jobCardHtml).join("");
+  bindJobCards(grid);
+  paintJobsStatus();
+}
+
+/* Yangi kelgan kartalarni ro'yxat oxiriga qo'shadi — birma-bir paydo bo'ladi. */
+function appendJobs(fresh) {
+  const grid = document.querySelector("[data-jobs]");
+  if (!grid || !fresh.length) return;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = fresh.map(jobCardHtml).join("");
+  bindJobCards(tmp);
+  const more = grid.querySelector("[data-jobs-more]");
+  while (tmp.firstElementChild) grid.insertBefore(tmp.firstElementChild, more);
+}
+
+function addJobs(list) {
+  const fresh = (list || []).filter((j) => j && !jobsById[j.id]);
+  fresh.forEach((j) => (jobsById[j.id] = j));
+  jobsList = jobsList.concat(fresh);
+  return fresh;
+}
+
+async function loadJobsFrom(key, startPage, cachedAt) {
+  if (jobsAbort) jobsAbort.abort();
+  const ctrl = new AbortController();
+  jobsAbort = ctrl;
+  jobsLoading = true;
+  paintJobsStatus();
+  let page = startPage;
+  try {
+    while (page) {
+      const data = await fetchJobsPage(page, ctrl.signal);
+      if (jobsAbort !== ctrl) return;
+      appendJobs(addJobs(Array.isArray(data) ? data : data.jobs));
+      page = data.hasMore ? page + 1 : null;
+      writeJobsCache(key, jobsList, page, cachedAt);
+      paintJobsStatus();
+    }
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    console.error("Vakansiyalarni olishda xatolik:", e);
+    if (!jobsList.length) jobsKey = null; // keyingi safar qayta urinib ko'riladi
+  }
+  if (jobsAbort === ctrl) {
+    jobsAbort = null;
+    jobsLoading = false;
+    paintJobsStatus();
+  }
+}
+
+async function renderJobs() {
+  const grid = document.querySelector("[data-jobs]");
+  if (!grid) return;
+
+  const key = jobsQueryKey();
+  // Qidiruv o'zgarmagan (masalan til, valyuta yoki filtr tugmasi) —
+  // serverdan qayta so'ramasdan, bor ro'yxatni qayta chizamiz.
+  if (key === jobsKey) {
+    paintJobs();
+    return;
+  }
+  jobsKey = key;
+  if (jobsAbort) { jobsAbort.abort(); jobsAbort = null; } // eski qidiruv yuklanishini to'xtatamiz
+  jobsList = [];
+  jobsById = {};
+
+  const cached = readJobsCache(key);
+  if (cached) {
+    addJobs(cached.jobs);
+    jobsLoading = !!cached.nextPage;
+    paintJobs();
+    if (cached.nextPage) await loadJobsFrom(key, cached.nextPage, cached.at);
+    return;
+  }
+
+  paintJobs();
+  await loadJobsFrom(key, 1);
 }
 
 const tracked = new Set();

@@ -210,6 +210,8 @@ const STRINGS = {
   adminPlanHint: { uz: "To'lovni chatda tekshirgach, tarifni faollashtiring.", ru: "Проверьте оплату в чате, затем активируйте тариф.", en: "Verify the payment in chat, then activate the plan.", de: "Prüfen Sie die Zahlung im Chat, dann aktivieren Sie den Tarif." },
   adminStatPro: { uz: "PRO", ru: "PRO", en: "PRO", de: "PRO" },
   adminStatMax: { uz: "MAX", ru: "MAX", en: "MAX", de: "MAX" },
+  jobsLoading: { uz: "Vakansiyalar yuklanmoqda…", ru: "Загружаем вакансии…", en: "Loading jobs…", de: "Stellen werden geladen…" },
+  jobsLoadingMore: { uz: "Yana vakansiyalar yuklanmoqda…", ru: "Загружаем ещё вакансии…", en: "Loading more jobs…", de: "Weitere Stellen werden geladen…" },
   navArchive: { uz: "Arxivim", ru: "Мой архив", en: "My archive", de: "Mein Archiv" },
   navAdmin: { uz: "Admin panel", ru: "Админ-панель", en: "Admin panel", de: "Admin-Panel" },
   archiveTitle: { uz: "Mening arxivim", ru: "Мой архив", en: "My archive", de: "Mein Archiv" },
