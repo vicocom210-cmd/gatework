@@ -38,7 +38,8 @@
 
   async function load() {
     const res = await fetch("/api/archive");
-    if (!res.ok) { location.href = "/login?redirect=/archive"; return; }
+    if (res.status === 401 || res.status === 403) { location.href = "/login/?redirect=/archive/"; return; }
+    if (!res.ok) { list.innerHTML = `<p class="empty glass-soft">Server xatosi (${res.status})</p>`; return; }
     data = await res.json();
     render();
   }
