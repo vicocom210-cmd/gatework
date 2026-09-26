@@ -443,15 +443,3 @@ const PAY_PERIODS = [
   { id: "week", name: { uz: "Haftasiga", ru: "В неделю", en: "Per week", de: "Pro Woche" }, short: { uz: "hafta", ru: "нед.", en: "wk", de: "Wo." } },
   { id: "month", name: { uz: "Oyiga", ru: "В месяц", en: "Per month", de: "Pro Monat" }, short: { uz: "oy", ru: "мес.", en: "mo", de: "Mon." } },
 ];
-
-/* ===== "Biz haqimizda" — yuksalish sahnasi (about-scene.js) ===== */
-Object.assign(STRINGS, {
-  ascentHint: { uz: "Pastga suring", ru: "Листайте вниз", en: "Scroll down", de: "Nach unten scrollen" },
-  ascentCta: { uz: "Vakansiyalarni ko'rish", ru: "Смотреть вакансии", en: "Browse jobs", de: "Stellen ansehen" },
-  cityTashkent: { uz: "Toshkent", ru: "Ташкент", en: "Tashkent", de: "Taschkent" },
-  cityBerlin: { uz: "Berlin", ru: "Берлин", en: "Berlin", de: "Berlin" },
-  cityStockholm: { uz: "Stokgolm", ru: "Стокгольм", en: "Stockholm", de: "Stockholm" },
-  cityWarsaw: { uz: "Varshava", ru: "Варшава", en: "Warsaw", de: "Warschau" },
-  cityLondon: { uz: "London", ru: "Лондон", en: "London", de: "London" },
-  cityAmsterdam: { uz: "Amsterdam", ru: "Амстердам", en: "Amsterdam", de: "Amsterdam" },
-});

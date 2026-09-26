@@ -45,11 +45,6 @@
       <span>Gate<i>Work</i></span>
     </a>
 
-    <!-- Telefonda: barcha menyu shu tugma orqali ochiladi -->
-    <button class="nav-burger" type="button" data-nav-toggle aria-label="Menyu" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-
     <div class="nav-links">
       <a href="{% url 'index' %}" class="{% if page == 'home' %}active{% endif %}" data-t="navHome"></a>
       <a href="{% url 'about' %}" class="{% if page == 'about' %}active{% endif %}" data-t="navAbout"></a>
@@ -78,20 +73,16 @@
         </button>
         <div class="contact-pop glass">
           <p class="contact-head" data-t="contactTitle"></p>
-          {% if CONTACT.telegram %}
           <a class="contact-item" href="https://t.me/{{ CONTACT.telegram }}" target="_blank" rel="noopener noreferrer">
             <span class="ci tg">✈</span>
             <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram }}</small></span>
             <button type="button" class="copy" data-copy="@{{ CONTACT.telegram }}" title="Copy">⧉</button>
           </a>
-          {% endif %}
-          {% if CONTACT.email %}
           <a class="contact-item" href="mailto:{{ CONTACT.email }}?subject=Gate%20Work" target="_blank" rel="noopener noreferrer">
             <span class="ci gm">✉</span>
             <span class="ct"><b data-t="contactMail"></b><small>{{ CONTACT.email }}</small></span>
             <button type="button" class="copy" data-copy="{{ CONTACT.email }}" title="Copy">⧉</button>
           </a>
-          {% endif %}
           <button class="contact-item" type="button" data-open-chat>
             <span class="ci ch">◎</span>
             <span class="ct"><b data-t="contactChat"></b><small data-t="contactChatSub"></small></span>
