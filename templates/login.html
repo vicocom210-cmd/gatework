@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gate Work — Kirish va ro'yxatdan o'tish{% endblock %}
+{% block description %}Gate Work hisobingizga kiring yoki bir daqiqada ro'yxatdan o'ting — xorijdagi rasmiy vakansiyalarni saqlab boring.{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+{% endblock %}
+
+{% block content %}
+<section class="auth">
+  <span class="orb o1"></span>
+  <span class="orb o2"></span>
+
+  <div class="auth-shell glass">
+    <!-- CHAP: brend paneli -->
+    <aside class="auth-side">
+      <div class="auth-side-bg aurora"></div>
+      <div class="auth-side-inner">
+        <img class="auth-logo"
+             data-logo
+             data-white="{% static 'images/logo-white.png' %}"
+             data-black="{% static 'images/logo-black.png' %}"
+             src="{% static 'images/logo-white.png' %}"
+             alt="Gate Work logotipi" />
+        <p class="auth-slogan" data-slogan></p>
+        <ul class="auth-perks">
+          <li><span>✓</span><em data-t="authPerk1"></em></li>
+          <li><span>✓</span><em data-t="authPerk2"></em></li>
+          <li><span>✓</span><em data-t="authPerk3"></em></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- O'NG: forma -->
+    <div class="auth-main">
+      <div class="auth-tabs" data-auth-tabs>
+        <span class="thumb" data-auth-thumb></span>
+        <button type="button" class="active" data-auth-tab="login" data-t="login"></button>
+        <button type="button" data-auth-tab="signup" data-t="signup"></button>
+      </div>
+
+      <div class="auth-panes">
+        <!-- KIRISH -->
+        <form class="auth-form active" data-auth-pane="login" novalidate>
+          <h1 class="auth-title" data-t="authLoginTitle"></h1>
+          <p class="auth-sub" data-t="authLoginSub"></p>
+
+          <label class="field">
+            <input type="email" name="email" required placeholder=" " autocomplete="email" />
+            <span data-t="authEmail"></span>
+          </label>
+
+          <label class="field">
+            <input type="password" name="password" required minlength="6" placeholder=" " autocomplete="current-password" />
+            <span data-t="authPassword"></span>
+            <button type="button" class="peek" data-peek aria-label="Parolni ko'rsatish">👁</button>
+          </label>
+
+          <div class="row">
+            <label class="check"><input type="checkbox" checked /><i></i><em data-t="authRemember"></em></label>
+            <a href="#" class="link" data-t="authForgot"></a>
+          </div>
+
+          <button class="btn-primary big" type="submit"><span data-t="login"></span></button>
+
+          <div class="or"><i></i><em data-t="authOr"></em><i></i></div>
+          <button type="button" class="btn-google"><span class="g">G</span><em data-t="authGoogle"></em></button>
+
+          <p class="switch"><em data-t="authNoAccount"></em>
+            <button type="button" class="link" data-auth-goto="signup" data-t="signup"></button>
+          </p>
+        </form>
+
+        <!-- RO'YXATDAN O'TISH -->
+        <form class="auth-form" data-auth-pane="signup" novalidate>
+          <h1 class="auth-title" data-t="authSignupTitle"></h1>
+          <p class="auth-sub" data-t="authSignupSub"></p>
+
+          <div class="avatar-row">
+            <span class="avatar-big" data-avatar-preview><i>+</i></span>
+            <div>
+              <h4 data-t="profilePhoto"></h4>
+              <label class="btn-ghost file">
+                <input type="file" name="avatar" accept="image/*" data-avatar-input hidden />
+                <span data-t="profileChange"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="two">
+            <label class="field">
+              <input type="text" name="firstName" required placeholder=" " autocomplete="given-name" />
+              <span data-t="profileFirst"></span>
+            </label>
+            <label class="field">
+              <input type="text" name="lastName" required placeholder=" " autocomplete="family-name" />
+              <span data-t="profileLast"></span>
+            </label>
+          </div>
+
+          <label class="field date">
+            <input type="date" name="birthDate" required placeholder=" " />
+            <span data-t="profileBirth"></span>
+          </label>
+
+          <label class="field">
+            <input type="email" name="email" required placeholder=" " autocomplete="email" />
+            <span data-t="authEmail"></span>
+          </label>
+
+          <label class="field">
+            <input type="password" name="password" required minlength="6" placeholder=" " autocomplete="new-password" />
+            <span data-t="authPassword"></span>
+            <button type="button" class="peek" data-peek aria-label="Parolni ko'rsatish">👁</button>
+          </label>
+          <div class="meter" data-meter><i></i></div>
+          <small class="meter-label" data-meter-label></small>
+
+          <label class="check terms"><input type="checkbox" required /><i></i><em data-t="authTerms"></em></label>
+
+          <button class="btn-primary big" type="submit"><span data-t="authCreate"></span></button>
+
+          <div class="or"><i></i><em data-t="authOr"></em><i></i></div>
+          <button type="button" class="btn-google"><span class="g">G</span><em data-t="authGoogle"></em></button>
+
+          <p class="switch"><em data-t="authHaveAccount"></em>
+            <button type="button" class="link" data-auth-goto="login" data-t="login"></button>
+          </p>
+        </form>
+      </div>
+
+      <p class="auth-note" data-auth-msg></p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}

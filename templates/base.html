@@ -1,0 +1,140 @@
+{% load static %}
+<!doctype html>
+<html lang="uz" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Gate Work{% endblock %}</title>
+  <meta name="description" content="{% block description %}Xorijdagi rasmiy ish o'rinlari bitta joyda.{% endblock %}" />
+  <link rel="icon" href="{% static 'images/logo-white.png' %}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- Saytga kirishdagi logo animatsiyasi -->
+<div class="intro" data-intro>
+  <div class="intro-inner">
+    <img class="intro-logo" data-logo
+         data-white="{% static 'images/logo-white.png' %}"
+         data-black="{% static 'images/logo-black.png' %}"
+         src="{% static 'images/logo-white.png' %}"
+         alt="Gate Work logotipi" />
+    <p class="intro-slogan" data-intro-slogan></p>
+    <span class="intro-bar"><i></i></span>
+  </div>
+  <span class="intro-gate left"></span>
+  <span class="intro-gate right"></span>
+</div>
+
+<div class="nav-outer">
+  <nav class="nav glass">
+    <a class="brand" href="{% url 'index' %}">
+      <span class="mark">
+        <img data-logo
+             data-white="{% static 'images/logo-white.png' %}"
+             data-black="{% static 'images/logo-black.png' %}"
+             src="{% static 'images/logo-white.png' %}"
+             alt="Gate Work logotipi" />
+      </span>
+      <span>Gate<i>Work</i></span>
+    </a>
+
+    <div class="nav-links">
+      <a href="{% url 'index' %}" class="{% if page == 'home' %}active{% endif %}" data-t="navHome"></a>
+      <a href="{% url 'about' %}" class="{% if page == 'about' %}active{% endif %}" data-t="navAbout"></a>
+      <a href="{% url 'rating' %}" class="{% if page == 'rating' %}active{% endif %}" data-t="navRating"></a>
+    </div>
+
+    <div class="nav-right">
+      <button class="icon-btn" data-theme-toggle aria-label="Kun / tun rejimi"><span data-theme-icon>☀</span></button>
+      <div class="lang-switch">
+        <button data-lang-btn="uz">uz</button>
+        <button data-lang-btn="ru">ru</button>
+        <button data-lang-btn="en">en</button>
+        <button data-lang-btn="de">de</button>
+      </div>
+      <div class="lang-switch" data-currency-switch>
+        <button data-cur-btn="native" class="active">SEK/€</button>
+        <button data-cur-btn="USD">$</button>
+        <button data-cur-btn="EUR">€</button>
+      </div>
+      <!-- ADMIN BILAN BOG'LANISH -->
+      <div class="contact-menu" data-contact-menu>
+        <button class="contact-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="dot"></span>
+          <span class="txt" data-t="contactBtn"></span>
+          <span class="ico">💬</span>
+        </button>
+        <div class="contact-pop glass">
+          <p class="contact-head" data-t="contactTitle"></p>
+          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram }}" target="_blank" rel="noopener noreferrer">
+            <span class="ci tg">✈</span>
+            <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram }}</small></span>
+            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram }}" title="Copy">⧉</button>
+          </a>
+          <a class="contact-item" href="mailto:{{ CONTACT.email }}?subject=Gate%20Work" target="_blank" rel="noopener noreferrer">
+            <span class="ci gm">✉</span>
+            <span class="ct"><b data-t="contactMail"></b><small>{{ CONTACT.email }}</small></span>
+            <button type="button" class="copy" data-copy="{{ CONTACT.email }}" title="Copy">⧉</button>
+          </a>
+          <button class="contact-item" type="button" data-open-chat>
+            <span class="ci ch">◎</span>
+            <span class="ct"><b data-t="contactChat"></b><small data-t="contactChatSub"></small></span>
+            <span class="unread" data-chat-unread hidden>0</span>
+          </button>
+        </div>
+      </div>
+      <div class="nav-auth" data-nav-auth></div>
+    </div>
+  </nav>
+</div>
+
+<!-- JONLI CHAT (admin bilan) -->
+<button class="chat-fab glass" type="button" data-open-chat aria-label="Chat">
+  <span class="ring"></span>
+  <span class="ico">💬</span>
+  <span class="unread" data-chat-unread hidden>0</span>
+</button>
+<section class="chat-box glass" data-chat-box aria-live="polite" hidden>
+  <header class="chat-head">
+    <span class="avatar-round sm"><i>A</i></span>
+    <div>
+      <b data-t="chatTitle"></b>
+      <small><span class="pulse"></span> <span data-t="chatOnline"></span></small>
+    </div>
+    <button class="icon-btn" type="button" data-close-chat aria-label="Yopish">✕</button>
+  </header>
+  <div class="chat-body" data-chat-body></div>
+  <div class="chat-quick" data-chat-quick></div>
+  <form class="chat-form" data-chat-form>
+    <input type="text" maxlength="2000" autocomplete="off" data-t-ph="chatPlaceholder" />
+    <button class="btn-primary" type="submit">➤</button>
+  </form>
+</section>
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer class="site">
+  <div class="wrap cols">
+    <div>
+      <h4>Gate Work</h4>
+      <p data-t="demoNote"></p>
+    </div>
+    <div>
+      <h4 data-t="trustedSources"></h4>
+      <ul data-footer-sources></ul>
+    </div>
+  </div>
+  <div class="wrap bottom">© 2026 Gate Work</div>
+</footer>
+
+<script src="{% static 'js/data.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/chat.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

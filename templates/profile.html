@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Profilni tahrirlash — Gate Work{% endblock %}
+{% block description %}Gate Work profilingizni tahrirlang: rasm, ism-familiya, tug'ilgan kun va o'zingizda bor hujjatlar.{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="aurora"></div>
+  <div class="orb" style="left:-8%;top:0;height:18rem;width:18rem;background:var(--primary)"></div>
+
+  <div class="wrap" style="max-width:760px">
+    <h1 class="reveal" data-t="profileTitle"></h1>
+    <p class="tagline reveal" style="transition-delay:.12s" data-t="profileSub"></p>
+
+    <form class="panel glass reveal" style="transition-delay:.2s" data-profile-form>
+      <div class="avatar-row">
+        <span class="avatar-big" data-avatar-preview></span>
+        <div>
+          <h4 data-t="profilePhoto"></h4>
+          <label class="btn-ghost file">
+            <input type="file" name="avatar" accept="image/*" data-avatar-input hidden />
+            <span data-t="profileChange"></span>
+          </label>
+          <p class="points"><b data-profile-points>0</b> <em data-t="profilePoints"></em></p>
+        </div>
+      </div>
+
+      <div class="two">
+        <label class="field"><input type="text" name="firstName" placeholder=" " /><span data-t="profileFirst"></span></label>
+        <label class="field"><input type="text" name="lastName" placeholder=" " /><span data-t="profileLast"></span></label>
+      </div>
+
+      <label class="field date"><input type="date" name="birthDate" placeholder=" " /><span data-t="profileBirth"></span></label>
+
+      <label class="field"><input type="password" name="password" minlength="6" placeholder=" " autocomplete="new-password" /><span data-t="profileNewPass"></span></label>
+
+      <h4 class="have-title" data-t="haveTitle"></h4>
+      <p class="have-hint" data-t="haveHint"></p>
+      <div class="chips" data-profile-assets></div>
+
+      <button class="btn-primary big" type="submit"><span data-t="profileSave"></span></button>
+      <p class="auth-note" data-profile-msg></p>
+    </form>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

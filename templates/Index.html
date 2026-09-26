@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Gate Work — Xorijdagi rasmiy ish o'rinlari{% endblock %}
+{% block description %}Germaniya, Polsha, Buyuk Britaniya, Niderlandiya va Shvetsiyadagi rasmiy vakansiyalar — o'zbek, rus va ingliz tillarida.{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="aurora"></div>
+  <div class="orb" style="left:-10%;top:-6%;height:20rem;width:20rem;background:var(--primary)"></div>
+  <div class="orb" style="right:-8%;top:10%;height:18rem;width:18rem;background:var(--accent-2);animation-delay:-6s"></div>
+
+  <div class="wrap" style="max-width:880px">
+    <h1>
+      <span class="reveal" data-t="heroTitle1"></span>
+      <span class="reveal text-gradient" style="transition-delay:.12s" data-t="heroTitle2"></span>
+    </h1>
+    <p class="tagline reveal" style="transition-delay:.2s" data-t="heroTagline"></p>
+
+    <form class="searchbar glass reveal" style="transition-delay:.28s" onsubmit="return false">
+      <input type="search" data-search data-t-ph="searchPlaceholder" aria-label="Qidiruv" />
+      <a href="#filters" class="btn-filter glass-soft" data-scroll-filters><span class="ico">⚙</span><span data-t="filters"></span><b class="badge" data-filter-count hidden></b></a>
+      <a href="#jobs" class="btn-primary" data-t="search"></a>
+    </form>
+
+    <div class="stats">
+      <div class="stat glass-soft reveal"><b data-to="5">0</b><small data-t="statCountries"></small></div>
+      <div class="stat glass-soft reveal" style="transition-delay:.1s"><b data-to="3">0</b><small data-t="statSectors"></small></div>
+      <div class="stat glass-soft reveal" style="transition-delay:.2s"><b data-to="100" data-suffix="%">0</b><small data-t="statOfficial"></small></div>
+    </div>
+  </div>
+
+  <div class="marquee"><div class="marquee-track" data-marquee></div></div>
+</section>
+
+<section class="jobs wrap" id="jobs">
+  <div class="pills" data-country-pills></div>
+
+  <div class="filterbox glass" id="filters">
+    <div class="filter-head">
+      <h3><span class="ico">⚙</span> <span data-t="filters"></span> <b class="badge" data-filter-count2 hidden></b></h3>
+      <button class="btn-ghost sm" data-filter-reset data-t="reset"></button>
+    </div>
+
+    <div class="filter-grid">
+      <div class="fgroup">
+        <label data-t="sectorLabel"></label>
+        <div class="pills" data-sector-pills style="justify-content:flex-start"></div>
+      </div>
+
+      <div class="fgroup">
+        <label data-t="payPeriod"></label>
+        <div class="pills" data-period-pills style="justify-content:flex-start"></div>
+        <div class="range">
+          <input type="number" min="0" inputmode="decimal" data-pay-min data-t-ph="payFrom" />
+          <span>—</span>
+          <input type="number" min="0" inputmode="decimal" data-pay-max data-t-ph="payTo" />
+        </div>
+      </div>
+
+      <div class="fgroup">
+        <label data-t="visaFilter"></label>
+        <div class="pills" data-visa-pills style="justify-content:flex-start"></div>
+      </div>
+    </div>
+
+    <div class="have-inline">
+      <div class="have-head">
+        <h3 data-t="haveTitle"></h3>
+        <button class="btn-ghost sm" data-asset-clear data-t="haveClear"></button>
+      </div>
+      <p class="have-hint" data-t="haveHint"></p>
+      <div class="chips" data-asset-filter></div>
+    </div>
+  </div>
+
+  <p class="count" data-count></p>
+  <div class="grid" data-jobs></div>
+</section>
+
+{% include "_benefits.html" %}
+{% endblock %}

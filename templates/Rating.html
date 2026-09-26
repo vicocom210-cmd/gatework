@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Eng faol foydalanuvchilar — Gate Work{% endblock %}
+{% block description %}Gate Work reytingi: eng faol foydalanuvchilar, ballar bo'yicha.{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="aurora"></div>
+  <div class="orb" style="right:-8%;top:2%;height:18rem;width:18rem;background:var(--accent-2)"></div>
+
+  <div class="wrap" style="max-width:760px">
+    <h1 class="reveal" data-t="ratingTitle"></h1>
+    <p class="tagline reveal" style="transition-delay:.12s" data-t="ratingSub"></p>
+    <div class="rank-list" data-rating></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/rating.js' %}"></script>
+{% endblock %}

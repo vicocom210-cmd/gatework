@@ -1,0 +1,285 @@
+/* ===== GATE WORK — kirish / ro'yxatdan o'tish dizayni ===== */
+
+.auth {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 120px 18px 80px;
+  overflow: hidden;
+}
+.auth .orb.o1 {
+  width: 460px; height: 460px; left: -120px; top: 40px;
+  background: var(--primary);
+}
+.auth .orb.o2 {
+  width: 380px; height: 380px; right: -100px; bottom: 0;
+  background: var(--chart-2, var(--primary-glow));
+  animation-delay: -6s;
+}
+
+.auth-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1040px;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  border-radius: 30px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(28px) scale(0.985);
+  animation: auth-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+}
+@keyframes auth-in {
+  to { opacity: 1; transform: none; }
+}
+
+/* --- chap panel --- */
+.auth-side { position: relative; padding: 44px 36px; overflow: hidden; }
+.auth-side-bg { position: absolute; inset: 0; opacity: 0.9; }
+.auth-side::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 40%, color-mix(in oklab, var(--background) 55%, transparent));
+  pointer-events: none;
+}
+.auth-side-inner { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; gap: 22px; }
+.auth-logo {
+  width: 176px; max-width: 70%;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.35));
+  animation: logo-float 7s ease-in-out infinite;
+}
+@keyframes logo-float {
+  0%, 100% { transform: translateY(0) }
+  50% { transform: translateY(-10px) }
+}
+.auth-slogan {
+  font-family: var(--font-display, inherit);
+  font-size: 20px; line-height: 1.35; margin: 0;
+  color: var(--foreground);
+}
+.auth-slogan i {
+  display: inline-block; font-style: normal;
+  opacity: 0; transform: translateY(12px);
+  animation: word-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.auth-slogan i:nth-child(1) { animation-delay: 0.35s }
+.auth-slogan i:nth-child(2) { animation-delay: 0.47s }
+.auth-slogan i:nth-child(3) { animation-delay: 0.59s }
+.auth-slogan i:nth-child(4) { animation-delay: 0.71s }
+@keyframes word-in { to { opacity: 1; transform: none } }
+
+.auth-perks { list-style: none; margin: auto 0 0; padding: 0; display: grid; gap: 12px; }
+.auth-perks li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 14px; color: var(--muted-foreground);
+  opacity: 0; transform: translateX(-14px);
+  animation: perk-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.auth-perks li:nth-child(1) { animation-delay: 0.5s }
+.auth-perks li:nth-child(2) { animation-delay: 0.62s }
+.auth-perks li:nth-child(3) { animation-delay: 0.74s }
+@keyframes perk-in { to { opacity: 1; transform: none } }
+.auth-perks span {
+  flex: none; width: 20px; height: 20px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 11px; font-weight: 700;
+  background: color-mix(in oklab, var(--primary) 22%, transparent);
+  color: var(--primary);
+}
+
+/* --- o'ng panel --- */
+.auth-main {
+  padding: 40px 38px 34px;
+  background: color-mix(in oklab, var(--background) 72%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.auth-tabs {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 1fr;
+  padding: 5px; gap: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  border: 1px solid var(--border);
+  margin-bottom: 26px;
+}
+.auth-tabs button {
+  position: relative; z-index: 2;
+  border: 0; background: none; cursor: pointer;
+  padding: 10px 8px; border-radius: 999px;
+  font: inherit; font-weight: 600; font-size: 14px;
+  color: var(--muted-foreground);
+  transition: color 0.25s ease;
+}
+.auth-tabs button.active { color: var(--primary-foreground); }
+.auth-tabs .thumb {
+  position: absolute; z-index: 1;
+  top: 5px; bottom: 5px; left: 5px;
+  width: calc(50% - 7px);
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: var(--shadow-glow);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.auth-tabs.is-signup .thumb { transform: translateX(calc(100% + 4px)); }
+
+.auth-panes { position: relative; }
+.auth-form { display: none; animation: pane-in 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.auth-form.active { display: block; }
+@keyframes pane-in {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px) }
+  to { opacity: 1; transform: none; filter: none }
+}
+
+.auth-title { font-size: 26px; margin: 0 0 6px; }
+.auth-sub { margin: 0 0 22px; color: var(--muted-foreground); font-size: 14px; }
+
+.field { position: relative; display: block; margin-bottom: 14px; }
+.field input {
+  width: 100%; box-sizing: border-box;
+  padding: 20px 44px 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--input);
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+  color: var(--foreground);
+  font: inherit; font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, background 0.2s ease;
+}
+.field input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
+}
+.field > span {
+  position: absolute; left: 16px; top: 16px;
+  font-size: 15px; color: var(--muted-foreground);
+  pointer-events: none;
+  transition: transform 0.22s ease, font-size 0.22s ease, color 0.22s ease;
+  transform-origin: left top;
+}
+.field input:focus + span,
+.field input:not(:placeholder-shown) + span {
+  transform: translateY(-9px) scale(0.76);
+  color: var(--primary);
+}
+.field input:user-invalid { border-color: var(--destructive); }
+.peek {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 999px;
+  border: 0; background: none; cursor: pointer;
+  color: var(--muted-foreground); font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.peek:hover { background: color-mix(in oklab, var(--foreground) 8%, transparent); color: var(--foreground); }
+
+.meter { height: 5px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 10%, transparent); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--destructive); transition: width 0.35s ease, background 0.35s ease; }
+.meter[data-level="2"] i { background: var(--gold, #d6a13a) }
+.meter[data-level="3"] i { background: var(--primary) }
+.meter-label { display: block; margin: 6px 0 14px; font-size: 12px; color: var(--muted-foreground); min-height: 14px; }
+
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 20px; font-size: 13px; }
+.check { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; color: var(--muted-foreground); font-size: 13px; }
+.check input { position: absolute; opacity: 0; width: 0; height: 0; }
+.check i {
+  width: 18px; height: 18px; flex: none; border-radius: 6px;
+  border: 1px solid var(--input); display: inline-block; position: relative;
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.check i::after {
+  content: ""; position: absolute; left: 5px; top: 2px;
+  width: 5px; height: 9px; border: 2px solid var(--primary-foreground);
+  border-top: 0; border-left: 0; transform: rotate(45deg) scale(0);
+  transition: transform 0.2s ease;
+}
+.check input:checked + i { background: var(--primary); border-color: var(--primary); }
+.check input:checked + i::after { transform: rotate(45deg) scale(1); }
+.check.terms { display: flex; align-items: flex-start; text-align: left; margin: 2px 0 20px; }
+.check.terms i { margin-top: 2px; }
+
+.auth em { font-style: normal; }
+.auth-perks em, .btn-google em, .switch em, .check em { font-style: normal; }
+
+a.link, button.link {
+  border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 600; color: var(--primary); text-decoration: none;
+}
+a.link:hover, button.link:hover { text-decoration: underline; }
+
+.btn-primary.big {
+  display: block; width: 100%; text-align: center;
+  padding: 14px 18px; border: 0; cursor: pointer;
+  border-radius: 999px; font: inherit; font-weight: 700; font-size: 15px;
+  background: var(--primary); color: var(--primary-foreground);
+  box-shadow: var(--shadow-glow);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.btn-primary.big:hover { transform: translateY(-2px) scale(1.01); }
+.btn-primary.big:active { transform: scale(0.99); }
+.btn-primary.big.loading { pointer-events: none; opacity: 0.75; }
+
+.or { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--muted-foreground); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.or i { flex: 1; height: 1px; background: var(--border); }
+
+.btn-google {
+  display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--foreground) 4%, transparent);
+  color: var(--foreground); font: inherit; font-weight: 600; font-size: 14px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.btn-google:hover { background: color-mix(in oklab, var(--foreground) 9%, transparent); transform: translateY(-1px); }
+.btn-google .g {
+  width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center;
+  background: #fff; color: #4285f4; font-weight: 800; font-size: 13px;
+}
+
+.switch { margin: 20px 0 0; font-size: 13px; color: var(--muted-foreground); text-align: center; }
+.switch button { margin-left: 6px; }
+
+.auth-note {
+  margin: 16px 0 0; min-height: 18px; text-align: center;
+  font-size: 13px; color: var(--primary); opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.auth-note.show { opacity: 1; }
+.auth-note.err { color: var(--destructive); }
+
+@media (max-width: 860px) {
+  .auth { padding: 100px 14px 60px; }
+  .auth-shell { grid-template-columns: 1fr; }
+  .auth-side { padding: 30px 26px; }
+  .auth-perks { margin-top: 18px; }
+  .auth-main { padding: 28px 22px 26px; }
+}
+
+/* ===== Profil rasmi va yangi maydonlar ===== */
+.avatar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.1rem; }
+.avatar-row h4 { font-size: .85rem; margin-bottom: .4rem; }
+
+.avatar-big {
+  display: grid; place-items: center; overflow: hidden; flex: 0 0 auto;
+  width: 4.5rem; height: 4.5rem; border-radius: 50%;
+  border: 1px dashed var(--border);
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  font-size: 1.4rem; font-weight: 700;
+  animation: avatarPop .7s cubic-bezier(.22,1,.36,1) both;
+}
+.avatar-big img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes avatarPop { from { opacity: 0; transform: scale(.7); } }
+
+.btn-ghost.file { display: inline-flex; cursor: pointer; font-size: .8rem; padding: .35rem .8rem; }
+.two { display: grid; gap: .7rem; grid-template-columns: 1fr 1fr; }
+@media (max-width: 520px) { .two { grid-template-columns: 1fr; } }
+
+.field.date span { top: .45rem; font-size: .7rem; opacity: .9; }
+.field.date input { padding-top: 1.35rem; color-scheme: dark; }
+html:not(.dark) .field.date input { color-scheme: light; }
+
+.panel { border-radius: 1.9rem; padding: 1.6rem; margin-top: 2rem; }
+.panel .points { margin-top: .5rem; font-size: .82rem; color: var(--muted-fg); }
+.panel .points b { color: var(--primary); font-size: 1rem; }
+.panel .have-title { margin-top: 1.2rem; font-size: .95rem; }

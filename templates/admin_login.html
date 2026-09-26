@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin kirish — Gate Work{% endblock %}
+
+{% block content %}
+<section class="hero" style="min-height:70vh;display:flex;align-items:center;justify-content:center">
+  <div class="wrap" style="max-width:380px">
+    <div class="glass" style="padding:32px;border-radius:20px">
+      <h2 style="margin-top:0">Admin panel</h2>
+      <p style="color:var(--muted-fg);font-size:14px">Username va parol bilan kiring.</p>
+
+      {% if error %}
+      <p style="color:#ff6b6b;font-size:14px">{{ error }}</p>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <label style="display:block;margin-bottom:12px">
+          <span style="font-size:13px;color:var(--muted-fg)">Username</span>
+          <input type="text" name="username" required
+                 style="width:100%;padding:10px;border-radius:10px;margin-top:4px;background:var(--secondary);border:1px solid var(--border);color:var(--foreground)" />
+        </label>
+        <label style="display:block;margin-bottom:16px">
+          <span style="font-size:13px;color:var(--muted-fg)">Parol</span>
+          <input type="password" name="password" required
+                 style="width:100%;padding:10px;border-radius:10px;margin-top:4px;background:var(--secondary);border:1px solid var(--border);color:var(--foreground)" />
+        </label>
+        <button type="submit" class="btn-primary" style="width:100%">Kirish</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

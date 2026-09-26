@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Admin panel — Gate Work{% endblock %}
+{% block description %}Gate Work boshqaruv paneli.{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/login.css' %}" />
+<meta name="robots" content="noindex" />
+{% endblock %}
+
+{% block content %}
+<section class="page admin">
+  <div class="aurora"></div>
+  <div class="orb" style="right:-10%;top:0;height:22rem;width:22rem;background:var(--primary)"></div>
+
+  <div class="wrap" style="max-width:1200px">
+    <div class="adm-head reveal">
+      <div>
+        <span class="adm-badge" data-t="adminBadge"></span>
+        <h1 data-t="adminTitle"></h1>
+        <p class="tagline" data-t="adminSub"></p>
+      </div>
+    </div>
+
+    <div class="adm-stats reveal" style="transition-delay:.1s" data-adm-stats></div>
+
+    <div class="adm-tabs reveal" style="transition-delay:.15s">
+      <button class="pill active" data-adm-tab="users">👥 <span data-t="adminUsers"></span></button>
+      <button class="pill" data-adm-tab="chat">💬 <span data-t="adminChat"></span> <b class="unread" data-adm-unread hidden>0</b></button>
+    </div>
+
+    <!-- FOYDALANUVCHILAR -->
+    <div class="adm-pane" data-adm-pane="users">
+      <div class="adm-toolbar">
+        <input class="adm-search" type="search" data-adm-search data-t-ph="adminSearch" />
+        <span class="adm-total" data-adm-total></span>
+      </div>
+      <div class="adm-users" data-adm-users></div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="adm-pane" data-adm-pane="chat" hidden>
+      <div class="adm-chat glass">
+        <aside class="threads" data-adm-threads></aside>
+        <div class="thread">
+          <header class="chat-head" data-adm-thread-head><b data-t="adminPickThread"></b></header>
+          <div class="chat-body" data-adm-thread-body></div>
+          <form class="chat-form" data-adm-thread-form hidden>
+            <input type="text" maxlength="2000" autocomplete="off" data-t-ph="chatPlaceholder" />
+            <button class="btn-primary" type="submit">➤</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TAHRIRLASH / ARXIV MODALI -->
+<div class="modal" data-adm-modal hidden>
+  <div class="modal-card glass">
+    <button class="icon-btn close" type="button" data-adm-modal-close aria-label="Yopish">✕</button>
+    <div data-adm-modal-body></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/archive.js' %}"></script>
+<script src="{% static 'js/admin.js' %}"></script>
+{% endblock %}

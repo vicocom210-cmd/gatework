@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mening arxivim — Gate Work{% endblock %}
+{% block description %}Ko'rgan ishlaringiz va topshirgan arizalaringiz tarixi.{% endblock %}
+
+{% block content %}
+<section class="page">
+  <div class="aurora"></div>
+  <div class="orb" style="left:-8%;top:0;height:18rem;width:18rem;background:var(--accent-2)"></div>
+
+  <div class="wrap" style="max-width:960px">
+    <h1 class="reveal" data-t="archiveTitle"></h1>
+    <p class="tagline reveal" style="transition-delay:.12s" data-t="archiveSub"></p>
+
+    <div class="arc-tabs reveal" style="transition-delay:.18s">
+      <button class="pill active" data-arc-tab="applies">📨 <span data-t="archiveApplies"></span> <b data-arc-n="applies">0</b></button>
+      <button class="pill" data-arc-tab="views">👁 <span data-t="archiveViews"></span> <b data-arc-n="views">0</b></button>
+      <button class="btn-ghost sm" style="margin-left:auto" data-arc-clear data-t="archiveClear"></button>
+    </div>
+
+    <div class="arc-list" data-arc-list></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/archive.js' %}"></script>
+{% endblock %}
