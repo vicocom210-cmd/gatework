@@ -75,8 +75,8 @@ class BundesagenturTests(TestCase):
     def _fake_get(self, calls):
         def get(url, headers=None, params=None, timeout=None):
             calls.append((url, dict(params)))
-            if "/v4/jobs" in url:
-                raise services.requests.ConnectionError("v4 ishlamaydi")
+            if "/v6/jobs" in url:
+                raise services.requests.ConnectionError("birinchi manzil ishlamaydi")
             resp = mock.Mock()
             resp.raise_for_status.return_value = None
             resp.json.return_value = {"stellenangebote": [
@@ -88,7 +88,7 @@ class BundesagenturTests(TestCase):
         calls = []
         with mock.patch.object(services.requests, "get", self._fake_get(calls)):
             jobs, more = services.fetch_bundesagentur_jobs(page=1, page_size=25)
-        searched = {c[1]["was"] for c in calls if "/v4/jobs" not in c[0]}
+        searched = {c[1]["was"] for c in calls if "/v6/jobs" not in c[0]}
         # avval bitta "Pflege Landwirtschaft Service" so'rovi ketardi va natija bo'sh edi
         self.assertEqual(searched, {"Pflege", "Landwirtschaft", "Service"})
         self.assertTrue(all("wo" not in c[1] for c in calls))
@@ -106,3 +106,13 @@ class BundesagenturTests(TestCase):
             n = len(calls)
             self.assertEqual(services.fetch_bundesagentur_jobs(query="x", page=2), ([], False))
         self.assertEqual(len(calls), n)  # 2-sahifada API'ga umuman murojaat qilinmadi
+
+    def test_extract_items_finds_list_under_any_key(self):
+        item = {"titel": "Pflegekraft", "refnr": "1", "arbeitgeber": "Klinik", "arbeitsort": {"ort": "Berlin"}}
+        self.assertEqual(services.de_extract_items({"stellenangebote": [item]}), [item])
+        self.assertEqual(services.de_extract_items({"jobs": [item], "maxErgebnisse": 1}), [item])
+        self.assertEqual(services.de_extract_items({"ergebnis": {"treffer": [item]}}), [item])
+        self.assertEqual(services.de_extract_items({"facetten": [{"x": 1}]}), [])
+        job = services._de_to_job({"stellenangebotsTitel": "T", "refnr": "9", "arbeitgeber": {"name": "AG"},
+                                   "arbeitsorte": [{"ort": "Köln"}]}, "service")
+        self.assertEqual((job["title"]["de"], job["employer"], job["city"]), ("T", "AG", "Köln"))

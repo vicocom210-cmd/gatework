@@ -17,11 +17,47 @@ from django.core.cache import cache
 SECTOR_TO_DE_KEYWORD = {"medical": "Pflege", "agriculture": "Landwirtschaft", "service": "Service"}
 
 
+# MUHIM: 2026-yil holatiga ko'ra v4 manzillari 403 "No match found"
+# qaytaradi (o'chirilgan) — ishlaydigani v6. v4 faqat zaxira sifatida qoldi.
 DE_API_URLS = (
+    "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
     "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs",
     "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/app/jobs",
-    "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
 )
+DE_ITEM_HINTS = ("titel", "refnr", "beruf", "hashId", "referenznummer", "stellenangebotsTitel")
+
+
+def _first(d, *keys):
+    for k in keys:
+        v = d.get(k)
+        if v:
+            return v
+    return None
+
+
+def de_extract_items(data):
+    """
+    Javobdan vakansiyalar ro'yxatini topadi. v4'da bu "stellenangebote"
+    edi; v6'da nomi boshqacha bo'lishi mumkin — shuning uchun ichida
+    vakansiyaga o'xshash (titel/refnr/... maydonli) obyektlar bor
+    birinchi ro'yxatni qidiramiz (2 darajagacha chuqurlikda).
+    """
+    def looks_like_jobs(v):
+        return isinstance(v, list) and v and isinstance(v[0], dict) and any(h in v[0] for h in DE_ITEM_HINTS)
+
+    if not isinstance(data, dict):
+        return data if looks_like_jobs(data) else []
+    if isinstance(data.get("stellenangebote"), list):
+        return data["stellenangebote"]
+    for v in data.values():
+        if looks_like_jobs(v):
+            return v
+    for v in data.values():
+        if isinstance(v, dict):
+            for vv in v.values():
+                if looks_like_jobs(vv):
+                    return vv
+    return []
 DE_HEADERS = {
     "X-API-Key": "jobboerse-jobsuche",
     "Accept": "application/json",
@@ -58,15 +94,23 @@ def _de_request(params):
 
 
 def _de_to_job(item, sector):
-    title = item.get("titel") or item.get("beruf") or "—"
-    ref_id = item.get("refnr") or item.get("hashId") or item.get("referenznummer") or ""
-    apply_url = item.get("externeUrl") or f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref_id}"
+    title = _first(item, "titel", "stellenangebotsTitel", "beruf", "title") or "—"
+    ref_id = _first(item, "refnr", "referenznummer", "hashId", "id") or ""
+    apply_url = _first(item, "externeUrl", "externeURL", "url") or f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref_id}"
+    employer = _first(item, "arbeitgeber", "arbeitgeberName", "firma") or "Noma'lum"
+    if isinstance(employer, dict):
+        employer = _first(employer, "name", "firma") or "Noma'lum"
+    place = item.get("arbeitsort") or item.get("arbeitsorte") or {}
+    if isinstance(place, list):
+        place = place[0] if place and isinstance(place[0], dict) else {}
+    city = (_first(place, "ort", "stadt", "region") or "") if isinstance(place, dict) else ""
+    posted = _first(item, "aktuelleVeroeffentlichungsdatum", "veroeffentlichungsdatum", "eintrittsdatum") or ""
     return {
         "id": f"de-live-{ref_id}",
         "sector": sector,
         "country": "DE",
-        "city": (item.get("arbeitsort") or {}).get("ort", ""),
-        "employer": item.get("arbeitgeber") or "Noma'lum",
+        "city": city,
+        "employer": employer,
         # MUHIM: app.js "title" ni {uz,ru,en,de} obyekti sifatida
         # kutadi (tl() funksiyasi orqali). Hozircha barcha tillar
         # uchun bir xil (asl) matnni beramiz — haqiqiy tarjimani
@@ -76,7 +120,7 @@ def _de_to_job(item, sector):
         "tags": [],
         "requirements": [],
         "pay": None,
-        "postedAt": (item.get("aktuelleVeroeffentlichungsdatum") or "")[:10],
+        "postedAt": str(posted)[:10],
         "sourceName": "Bundesagentur für Arbeit",
         "sourceUrl": apply_url,
     }
@@ -107,7 +151,7 @@ def fetch_bundesagentur_jobs(query="", sector="all", page=1, page_size=25):
         data = _de_request({"angebotsart": "1", "was": was, "pav": "false", "size": size, "page": page})
         if data is None:
             return [], False
-        items = data.get("stellenangebote", []) or []
+        items = de_extract_items(data)
         return [_de_to_job(it, sec) for it in items], len(items) >= size
 
     with ThreadPoolExecutor(max_workers=len(searches)) as pool:
