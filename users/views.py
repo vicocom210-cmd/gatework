@@ -259,12 +259,13 @@ def _is_admin(user):
     return user.is_authenticated and user.is_staff
 
 
-def _with_counts(qs, admin_id):
+def _with_counts(qs):
     """Har bir foydalanuvchiga arizalar, ko'rishlar va o'qilmagan xabarlar sonini qo'shadi."""
     return qs.annotate(
         n_applies=Count("job_events", filter=Q(job_events__kind="apply"), distinct=True),
         n_views=Count("job_events", filter=Q(job_events__kind="view"), distinct=True),
-        n_unread=Count("sent_messages", filter=Q(sent_messages__receiver_id=admin_id, sent_messages__is_read=False), distinct=True),
+        n_unread=Count("sent_messages", filter=Q(sent_messages__receiver__is_staff=True, sent_messages__is_read=False,
+                                                 is_staff=False), distinct=True),
     )
 
 
@@ -286,7 +287,7 @@ class AdminUsersListView(APIView):
         qs = User.objects.all().order_by("-date_joined")
         if q:
             qs = qs.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q) | Q(email__icontains=q))
-        out = [_admin_user_public(u) for u in _with_counts(qs, request.user.id)]
+        out = [_admin_user_public(u) for u in _with_counts(qs)]
         return Response({"ok": True, "users": out, "total": len(out)})
 
 
@@ -294,7 +295,7 @@ class AdminUserDetailView(APIView):
     authentication_classes = [CSRFExemptSessionAuthentication]
 
     def get_object(self, request, uid):
-        return _with_counts(User.objects.filter(id=uid), request.user.id).first()
+        return _with_counts(User.objects.filter(id=uid)).first()
 
     def get(self, request, uid):
         if not _is_admin(request.user):
@@ -417,6 +418,6 @@ class AdminStatsView(APIView):
             "max": User.objects.filter(plan="max").count(),
             "applies": JobEvent.objects.filter(kind="apply").count(),
             "views": JobEvent.objects.filter(kind="view").count(),
-            "unread": Message.objects.filter(receiver_id=request.user.id, is_read=False).count(),
+            "unread": Message.objects.filter(receiver__is_staff=True, sender__is_staff=False, is_read=False).count(),
             "online": User.objects.filter(last_seen__gte=now - timedelta(minutes=5)).count(),
         })

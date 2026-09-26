@@ -19,6 +19,25 @@ def _first_admin_id():
     return row.id if row else None
 
 
+def _thread_q(user_id):
+    """
+    Foydalanuvchi va ADMINLAR (istalgan is_staff) o'rtasidagi barcha xabarlar.
+
+    MUHIM: avval xabarlar faqat "birinchi admin" bilan bog'langan edi —
+    saytda ikkita admin bo'lsa, ikkinchisi foydalanuvchi xabarlarini
+    ko'rmasdi, uning javobi esa foydalanuvchiga chiqmasdi. Endi barcha
+    adminlar bitta umumiy "qabul qutisi"dan foydalanadi.
+    """
+    return (Q(sender_id=user_id, receiver__is_staff=True)
+            | Q(sender__is_staff=True, receiver_id=user_id))
+
+
+def _unread_for_admins(user_id=None):
+    """Oddiy foydalanuvchilardan adminlarga kelgan, hali o'qilmagan xabarlar."""
+    qs = Message.objects.filter(receiver__is_staff=True, sender__is_staff=False, is_read=False)
+    return qs.filter(sender_id=user_id) if user_id else qs
+
+
 def _user_public_mini(u):
     if not u:
         return None
@@ -50,17 +69,19 @@ class ChatMessagesView(APIView):
             after = int(request.query_params.get("after", "0"))
         except ValueError:
             after = 0
-        thread = Message.objects.filter(
-            Q(sender_id=user.id, receiver_id=other_id) | Q(sender_id=other_id, receiver_id=user.id)
-        )
+        client_id = other_id if user.is_staff else user.id
+        thread = Message.objects.filter(_thread_q(client_id))
         if after:
             qs = list(thread.filter(id__gt=after).order_by("id")[:300])
         else:
             # Birinchi ochilishda ENG OXIRGI 300 ta xabar (eng eskilari emas)
             qs = list(thread.order_by("-id")[:300])[::-1]
 
-        # Menga kelganlarini o'qilgan deb belgilaymiz
-        Message.objects.filter(receiver_id=user.id, sender_id=other_id, is_read=False).update(is_read=True)
+        # Menga (yoki admin bo'lsam — adminlarga) kelganlarini o'qilgan deb belgilaymiz
+        if user.is_staff:
+            _unread_for_admins(client_id).update(is_read=True)
+        else:
+            Message.objects.filter(receiver_id=user.id, sender__is_staff=True, is_read=False).update(is_read=True)
         partner = User.objects.filter(id=other_id).first()
         return Response({
             "ok": True,
@@ -112,7 +133,10 @@ class ChatUnreadView(APIView):
         user = request.user
         if not user.is_authenticated:
             return Response({"ok": False, "count": 0}, status=status.HTTP_401_UNAUTHORIZED)
-        n = Message.objects.filter(receiver_id=user.id, is_read=False).count()
+        if user.is_staff:
+            n = _unread_for_admins().count()
+        else:
+            n = Message.objects.filter(receiver_id=user.id, is_read=False).count()
         return Response({"ok": True, "count": n})
 
 
@@ -122,13 +146,10 @@ class ChatThreadsView(APIView):
     def get(self, request):
         if not _is_admin(request.user):
             return Response({"ok": False}, status=status.HTTP_403_FORBIDDEN)
-        admin_id = request.user.id
         out = []
-        for u in User.objects.exclude(id=admin_id):
-            last = Message.objects.filter(
-                Q(sender_id=u.id, receiver_id=admin_id) | Q(sender_id=admin_id, receiver_id=u.id)
-            ).order_by("-id").first()
-            unread = Message.objects.filter(sender_id=u.id, receiver_id=admin_id, is_read=False).count()
+        for u in User.objects.filter(is_staff=False):
+            last = Message.objects.filter(_thread_q(u.id)).order_by("-id").first()
+            unread = _unread_for_admins(u.id).count()
             # admin.js suhbat sarlavhasida email, tarif, onlayn holati va
             # tahrirlash oynasi uchun to'liq foydalanuvchi ma'lumotini ishlatadi
             item = user_public(u)

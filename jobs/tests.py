@@ -65,3 +65,44 @@ class ArchiveApiTests(TestCase):
         self.user.save()
         r = self.client.post("/api/track", {"kind": "apply", "job": {"id": "x"}}, content_type="application/json")
         self.assertEqual(r.status_code, 402)
+
+
+@override_settings(CACHES=LOCMEM)
+class BundesagenturTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def _fake_get(self, calls):
+        def get(url, headers=None, params=None, timeout=None):
+            calls.append((url, dict(params)))
+            if "/v4/jobs" in url:
+                raise services.requests.ConnectionError("v4 ishlamaydi")
+            resp = mock.Mock()
+            resp.raise_for_status.return_value = None
+            resp.json.return_value = {"stellenangebote": [
+                {"titel": f"{params['was']} {i}", "refnr": f"{params['was']}-{i}"} for i in range(params["size"])]}
+            return resp
+        return get
+
+    def test_all_sectors_are_searched_separately(self):
+        calls = []
+        with mock.patch.object(services.requests, "get", self._fake_get(calls)):
+            jobs, more = services.fetch_bundesagentur_jobs(page=1, page_size=25)
+        searched = {c[1]["was"] for c in calls if "/v4/jobs" not in c[0]}
+        # avval bitta "Pflege Landwirtschaft Service" so'rovi ketardi va natija bo'sh edi
+        self.assertEqual(searched, {"Pflege", "Landwirtschaft", "Service"})
+        self.assertTrue(all("wo" not in c[1] for c in calls))
+        self.assertEqual(len(jobs), 27)
+        self.assertEqual({j["sector"] for j in jobs}, {"medical", "agriculture", "service"})
+        self.assertTrue(more)
+
+    def test_dead_api_is_not_retried_every_page(self):
+        calls = []
+        def down(*a, **kw):
+            calls.append(1)
+            raise services.requests.ConnectionError("down")
+        with mock.patch.object(services.requests, "get", down):
+            services.fetch_bundesagentur_jobs(query="x", page=1)
+            n = len(calls)
+            self.assertEqual(services.fetch_bundesagentur_jobs(query="x", page=2), ([], False))
+        self.assertEqual(len(calls), n)  # 2-sahifada API'ga umuman murojaat qilinmadi

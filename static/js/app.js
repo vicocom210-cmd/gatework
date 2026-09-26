@@ -315,7 +315,7 @@ function renderFilters() {
    bilan kartalar chiziladi, qolganlari orqadan qo'shilib boradi.
    Natija localStorage'da saqlanadi: sahifa yangilanganda vakansiyalar
    darhol qayta chiqadi va yuklash to'xtagan joyidan davom etadi. */
-const LS_JOBS = "gatework-jobs-v1";
+const LS_JOBS = "gatework-jobs-v2"; // versiya o'zgarsa — brauzerdagi eski kesh tashlanadi
 const JOBS_CACHE_MS = 15 * 60 * 1000;
 let jobsList = [];
 let jobsById = {};

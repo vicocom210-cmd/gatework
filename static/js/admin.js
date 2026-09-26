@@ -245,8 +245,8 @@
   }
 
   function bubble(m) {
-    const mine = m.senderId === currentUser.id;
-    return `<div class="msg ${mine ? "mine" : "theirs"} ${m.attachment ? "has-att" : ""}">${GWChatMedia.renderAttachment(m)}${m.text ? `<p>${esc(m.text).replace(/\n/g, "<br>")}</p>` : ""}<time>${mine ? t("chatYou") : esc(currentThread.firstName || currentThread.name)} · ${timeAgo(m.createdAt)}</time></div>`;
+    const mine = m.senderId !== currentThread.id; // istalgan admin javobi — "biz" tomonda
+    return `<div class="msg ${mine ? "mine" : "theirs"} ${m.attachment ? "has-att" : ""}">${GWChatMedia.renderAttachment(m)}${m.text ? `<p>${esc(m.text).replace(/\n/g, "<br>")}</p>` : ""}<time>${mine ? (m.senderId === currentUser.id ? t("chatYou") : t("chatAdmin")) : esc(currentThread.firstName || currentThread.name)} · ${timeAgo(m.createdAt)}</time></div>`;
   }
 
   async function openThread(u, keep) {

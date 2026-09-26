@@ -15,83 +15,112 @@ import requests
 from django.core.cache import cache
 
 SECTOR_TO_DE_KEYWORD = {"medical": "Pflege", "agriculture": "Landwirtschaft", "service": "Service"}
-ALL_SECTORS_DE_KEYWORDS = " ".join(SECTOR_TO_DE_KEYWORD.values())
 
 
 DE_API_URLS = (
     "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs",
+    "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/app/jobs",
     "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
 )
+DE_HEADERS = {
+    "X-API-Key": "jobboerse-jobsuche",
+    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0 (compatible; GateWork/1.0; +https://gatework.uz)",
+}
 # Qaysi versiya ishlagani eslab qolinadi — aks holda har sahifada avval
 # ishlamaydigan manzil sinab ko'rilib, har safar vaqt yo'qotilar edi.
 _de_working_url = None
+DE_DOWN_KEY = "jobs:de-down"
+
+
+def _de_request(params):
+    """
+    Bundesagentur API'ga bitta so'rov. Muvaffaqiyatli bo'lsa — JSON,
+    aks holda None. API butunlay ishlamasa, 2 daqiqa davomida qayta
+    urinmaymiz (aks holda har sahifa 8-16 soniya kutib qolardi).
+    """
+    global _de_working_url
+    if cache.get(DE_DOWN_KEY):
+        return None
+    urls = [_de_working_url] if _de_working_url else []
+    urls += [u for u in DE_API_URLS if u != _de_working_url]
+    for url in urls:
+        try:
+            res = requests.get(url, headers=DE_HEADERS, params=params, timeout=8)
+            res.raise_for_status()
+            data = res.json()
+            _de_working_url = url
+            return data
+        except Exception as e:
+            print(f"[Bundesagentur xatosi — {url}] {e}")
+    cache.set(DE_DOWN_KEY, True, 120)
+    return None
+
+
+def _de_to_job(item, sector):
+    title = item.get("titel") or item.get("beruf") or "—"
+    ref_id = item.get("refnr") or item.get("hashId") or item.get("referenznummer") or ""
+    apply_url = item.get("externeUrl") or f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref_id}"
+    return {
+        "id": f"de-live-{ref_id}",
+        "sector": sector,
+        "country": "DE",
+        "city": (item.get("arbeitsort") or {}).get("ort", ""),
+        "employer": item.get("arbeitgeber") or "Noma'lum",
+        # MUHIM: app.js "title" ni {uz,ru,en,de} obyekti sifatida
+        # kutadi (tl() funksiyasi orqali). Hozircha barcha tillar
+        # uchun bir xil (asl) matnni beramiz — haqiqiy tarjimani
+        # keyingi bosqichda qo'shamiz.
+        "title": {"uz": title, "ru": title, "en": title, "de": title},
+        "desc": {"uz": "", "ru": "", "en": "", "de": ""},
+        "tags": [],
+        "requirements": [],
+        "pay": None,
+        "postedAt": (item.get("aktuelleVeroeffentlichungsdatum") or "")[:10],
+        "sourceName": "Bundesagentur für Arbeit",
+        "sourceUrl": apply_url,
+    }
 
 
 def fetch_bundesagentur_jobs(query="", sector="all", page=1, page_size=25):
     """
     Germaniya — Bundesagentur für Arbeit Jobsuche API (bepul, ochiq).
-    Faqat BITTA sahifani oladi (butun natijani emas) — shunda birinchi
-    vakansiyalar bir necha soniyada chiqadi. Qaytaradi: (jobs, has_more).
+    Faqat BITTA sahifani oladi. Qaytaradi: (jobs, has_more).
+
+    MUHIM: API "was" maydonidagi so'zlarning HAMMASI bir vakansiyada
+    bo'lishini talab qiladi. Avval "Hammasi" tanlanganda "Pflege
+    Landwirtschaft Service" deb bitta so'rov ketardi — natija deyarli
+    doim bo'sh edi. Endi har bir soha alohida (parallel) so'raladi.
     """
-    global _de_working_url
-
+    query = query.strip()
     if sector in SECTOR_TO_DE_KEYWORD:
-        search_text = f"{query} {SECTOR_TO_DE_KEYWORD[sector]}".strip()
+        searches = [(f"{query} {SECTOR_TO_DE_KEYWORD[sector]}".strip(), sector, page_size)]
+    elif query:
+        searches = [(query, "service", page_size)]
     else:
-        search_text = query.strip() or ALL_SECTORS_DE_KEYWORDS
+        per = max(1, -(-page_size // len(SECTOR_TO_DE_KEYWORD)))  # yuqoriga yaxlitlash
+        searches = [(kw, sec, per) for sec, kw in SECTOR_TO_DE_KEYWORD.items()]
 
-    headers = {"X-API-Key": "jobboerse-jobsuche"}
-    params = {
-        "angebotsart": "1",
-        "was": search_text,
-        "wo": "Deutschland",
-        "pav": "false",
-        "size": page_size,
-        "page": page,
-    }
-    urls = [_de_working_url] if _de_working_url else []
-    urls += [u for u in DE_API_URLS if u != _de_working_url]
+    def one(search):
+        was, sec, size = search
+        # "wo" berilmaydi — butun Germaniya bo'yicha qidiriladi
+        data = _de_request({"angebotsart": "1", "was": was, "pav": "false", "size": size, "page": page})
+        if data is None:
+            return [], False
+        items = data.get("stellenangebote", []) or []
+        return [_de_to_job(it, sec) for it in items], len(items) >= size
 
-    data = None
-    for version_url in urls:
-        try:
-            res = requests.get(version_url, headers=headers, params=params, timeout=8)
-            res.raise_for_status()
-            data = res.json()
-            _de_working_url = version_url
-            break
-        except Exception as e:
-            print(f"[Bundesagentur xatosi — {page}-sahifa] {e}")
-    if data is None:
-        return [], False
+    with ThreadPoolExecutor(max_workers=len(searches)) as pool:
+        results = list(pool.map(one, searches))
 
-    items = data.get("stellenangebote", []) or []
-
-    jobs = []
-    for item in items:
-        title = item.get("titel") or "—"
-        ref_id = item.get("hashId") or item.get("referenznummer") or ""
-        apply_url = item.get("externeUrl") or f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{ref_id}"
-        jobs.append({
-            "id": f"de-live-{ref_id}",
-            "sector": sector if sector != "all" else "service",
-            "country": "DE",
-            "city": (item.get("arbeitsort") or {}).get("ort", ""),
-            "employer": item.get("arbeitgeber") or "Noma'lum",
-            # MUHIM: app.js "title" ni {uz,ru,en,de} obyekti sifatida
-            # kutadi (tl() funksiyasi orqali). Hozircha barcha tillar
-            # uchun bir xil (asl) matnni beramiz — haqiqiy tarjimani
-            # keyingi darsda qo'shamiz.
-            "title": {"uz": title, "ru": title, "en": title, "de": title},
-            "desc": {"uz": "", "ru": "", "en": "", "de": ""},
-            "tags": [],
-            "requirements": [],
-            "pay": None,
-            "postedAt": (item.get("aktuelleVeroeffentlichungsdatum") or "")[:10],
-            "sourceName": "Bundesagentur für Arbeit",
-            "sourceUrl": apply_url,
-        })
-    return jobs, len(items) >= page_size
+    # Sohalarni aralashtirib (navbat bilan) qo'yamiz, takrorlarni olib tashlaymiz
+    jobs, seen = [], set()
+    for i in range(max((len(js) for js, _ in results), default=0)):
+        for js, _ in results:
+            if i < len(js) and js[i]["id"] not in seen:
+                seen.add(js[i]["id"])
+                jobs.append(js[i])
+    return jobs, any(more for _, more in results)
 
 
 def fetch_arbetsformedlingen_jobs(query="", sector="all", page=1, page_size=25):
