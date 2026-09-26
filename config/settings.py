@@ -2,6 +2,7 @@
 Django settings for config project.
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -99,3 +100,14 @@ CACHES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "users.User"
+
+# Google Sign-In (static/js/auth.js'dagi GOOGLE_CLIENT_ID bilan bir xil bo'lishi SHART)
+GOOGLE_CLIENT_ID = os.environ.get(
+    "GOOGLE_CLIENT_ID", "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.googleusercontent.com"
+)
+
+# To'lov oynasida ko'rsatiladigan karta raqami (/api/plans). Bo'sh bo'lsa — ko'rsatilmaydi.
+PAYMENT_CARD = os.environ.get("PAYMENT_CARD", "")
+
+# Chat fayllari va avatarlar uchun yuklash chegarasi (baytlarda)
+CHAT_MAX_UPLOAD = 25 * 1024 * 1024

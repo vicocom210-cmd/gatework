@@ -4,6 +4,7 @@ from django.conf.urls.static import static
 from django.urls import path, include
 from users.views import (
     RegisterView, LoginView, LogoutView, MeView,
+    ProfileView, RatingView, PlansView, ActivityView, GoogleVerifyView,
     AdminUsersListView, AdminUserDetailView, AdminStatsView,
 )
 from jobs.views import JobsListView, TrackView, ArchiveView, ArchiveClearView
@@ -37,6 +38,11 @@ urlpatterns = [
     path("api/login", LoginView.as_view()),
     path("api/logout", LogoutView.as_view()),
     path("api/me", MeView.as_view()),
+    path("api/profile", ProfileView.as_view()),
+    path("api/rating", RatingView.as_view()),
+    path("api/plans", PlansView.as_view()),
+    path("api/activity", ActivityView.as_view()),
+    path("auth/google/verify", GoogleVerifyView.as_view()),
 
     path("api/admin/users", AdminUsersListView.as_view()),
     path("api/admin/users/<int:uid>", AdminUserDetailView.as_view()),

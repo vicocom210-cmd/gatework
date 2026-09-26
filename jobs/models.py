@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from users.utils import fmt_dt
+
 
 class JobEvent(models.Model):
     """Eski Flask'dagi 'job_events' jadvalining Django ekvivalenti.
@@ -27,5 +29,5 @@ class JobEvent(models.Model):
             "id": self.id, "kind": self.kind, "jobId": self.job_id,
             "title": self.title, "employer": self.employer, "city": self.city,
             "country": self.country, "url": self.url,
-            "createdAt": self.created_at.isoformat(),
+            "createdAt": fmt_dt(self.created_at),
         }

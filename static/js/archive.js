@@ -1,7 +1,6 @@
 /* ===== GATE WORK — foydalanuvchi arxivi (ko'rilgan ishlar / arizalar) ===== */
 (function () {
   const list = document.querySelector("[data-arc-list]");
-  if (!list) return;
 
   let data = { applies: [], views: [] };
   let tab = "applies";
@@ -28,6 +27,10 @@
       })
       .join("");
   };
+
+  // MUHIM: renderArchiveList admin panelida ham ishlatiladi (u yerda
+  // [data-arc-list] yo'q) — shuning uchun sahifaga xos qism shu yerdan boshlanadi.
+  if (!list) return;
 
   function render() {
     document.querySelectorAll("[data-arc-tab]").forEach((b) => b.classList.toggle("active", b.dataset.arcTab === tab));

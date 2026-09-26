@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+from users.utils import fmt_dt
+
 
 class Message(models.Model):
     """Eski Flask'dagi 'messages' jadvalining Django ekvivalenti."""
@@ -24,7 +26,7 @@ class Message(models.Model):
             "receiverId": self.receiver_id,
             "text": self.text,
             "isRead": self.is_read,
-            "createdAt": self.created_at.isoformat(),
+            "createdAt": fmt_dt(self.created_at),
             "attachment": self.attachment.url if self.attachment else None,
             "attachmentType": self.attachment_type,
             "attachmentName": self.attachment_name,

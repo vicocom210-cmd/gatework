@@ -3,19 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+from users.utils import plan_active
 from users.views import CSRFExemptSessionAuthentication
 from .services import get_jobs_page
 from .models import JobEvent
-
-
-def _plan_active(user):
-    """Tarif hali kuchidami? Muddati o'tmagan pro/max, yoki admin."""
-    if user.is_staff:
-        return True
-    if user.plan in ("pro", "max"):
-        if user.plan_until is None or user.plan_until >= timezone.now():
-            return True
-    return False
 
 
 class JobsListView(APIView):
@@ -62,7 +53,7 @@ class TrackView(APIView):
         if kind not in ("view", "apply") or not job_id:
             return Response({"ok": False, "error": "Noto'g'ri so'rov."}, status=400)
 
-        if kind == "apply" and not _plan_active(user):
+        if kind == "apply" and not plan_active(user):
             return Response({"ok": False, "error": "plan_required"}, status=402)
 
         if kind == "view":
