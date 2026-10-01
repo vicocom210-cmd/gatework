@@ -29,6 +29,12 @@ const STRINGS = {
   allCountries: { uz: "Barcha mamlakatlar", ru: "Все страны", en: "All countries", de: "Alle Länder" },
   // UZ/RU/EN/DE: manba (platforma) filtri uchun matnlar
   allSources: { uz: "Barcha manbalar", ru: "Все источники", en: "All sources", de: "Alle Quellen" },
+  emptySource: {
+    uz: "«%s» manbasi hozir natija bermadi (javob bermayapti yoki kalit kerak). «Barcha manbalar»ni tanlab ko'ring.",
+    ru: "Источник «%s» сейчас не дал результатов (недоступен или нужен ключ). Попробуйте «Все источники».",
+    en: "Source “%s” returned nothing right now (unavailable or needs a key). Try “All sources”.",
+    de: "Quelle „%s“ lieferte gerade nichts (nicht verfügbar oder Schlüssel nötig). Versuchen Sie „Alle Quellen“.",
+  },
   sourceNoKey: { uz: "kalit kerak", ru: "нужен ключ", en: "key required", de: "Schlüssel nötig" },
   allSectors: { uz: "Barcha sohalar", ru: "Все сферы", en: "All sectors", de: "Alle Branchen" },
   visaOnly: { uz: "Viza yordami beriladigan ishlar", ru: "Только с помощью в визе", en: "Visa sponsorship only", de: "Nur mit Visumsunterstützung" },

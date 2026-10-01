@@ -428,7 +428,22 @@ async function renderJobs() {
   if (countEl) countEl.innerHTML = `<b>${jobs.length}</b> ${t("resultsCount")}`;
 
   if (!jobs.length) {
-    grid.innerHTML = `<p class="empty glass-soft">${t("empty")}</p>`;
+    // UZ: Agar aniq bitta manba tanlangan bo'lsa va bo'sh qaytsa — o'sha manba
+    //     hozir javob bermayapti (yoki kalit kerak). Foydalanuvchiga "Barcha
+    //     manbalar"ni tanlashni taklif qilamiz.
+    // RU: Если выбран конкретный источник и он пуст — он сейчас недоступен (или
+    //     нужен ключ). Предлагаем выбрать "Все источники".
+    // EN: If a specific source is selected and comes back empty — it's currently
+    //     unavailable (or needs a key). Suggest picking "All sources".
+    // DE: Ist eine bestimmte Quelle gewählt und leer — derzeit nicht verfügbar
+    //     (oder Schlüssel nötig). "Alle Quellen" vorschlagen.
+    if (state.source !== "all") {
+      const sName = (sourcesCache || []).find((s) => s.key === state.source);
+      const label = sName ? sName.name : state.source;
+      grid.innerHTML = `<p class="empty glass-soft">${t("emptySource").replace("%s", label)}</p>`;
+    } else {
+      grid.innerHTML = `<p class="empty glass-soft">${t("empty")}</p>`;
+    }
     return;
   }
 
