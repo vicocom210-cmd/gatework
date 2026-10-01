@@ -562,11 +562,25 @@ SOURCES = [
     {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True, "heavy": True},
     {"key": "arbeitnow", "name": "Arbeitnow", "countries": ["DE"], "fn": fetch_arbeitnow_jobs, "enabled": True},
     {"key": "adzuna", "name": "Adzuna", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_adzuna_jobs, "enabled": True, "needs_key": "ADZUNA_APP_ID"},
-    {"key": "eures", "name": "EURES", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_eures_jobs, "enabled": True, "needs_key": "EURES_API_KEY"},
-    {"key": "findajob", "name": "Find a Job (gov.uk)", "countries": ["GB"], "fn": fetch_findajob_jobs, "enabled": True, "needs_key": "FINDAJOB_API_KEY"},
-    {"key": "praca", "name": "Praca.gov.pl", "countries": ["PL"], "fn": fetch_praca_jobs, "enabled": True},
-    {"key": "werkenbijdeoverheid", "name": "WerkenbijdeOverheid", "countries": ["NL"], "fn": fetch_werkenbijdeoverheid_jobs, "enabled": True},
-    {"key": "arztestellen", "name": "Ärztestellen", "countries": ["DE"], "fn": fetch_arztestellen_jobs, "enabled": True},
+    # UZ: Quyidagilar hali TO'LIQ yozilmаган (stub) yoki kalit kerak — shuning
+    #     uchun "stub": True bilan belgilaymiz va filtrда KO'RSATMAYMIZ (doim
+    #     bo'sh bo'lgani uchun foydalanuvchini chalkashtirmasin). Kod tayyor —
+    #     kalit qo'shilib yoki API yozilганда "stub"ni olib tashlash kifoya.
+    # RU: Ниже — пока не реализовано (stub) или нужен ключ, поэтому помечаем
+    #     "stub": True и НЕ показываем в фильтре (они всегда пусты). Код готов —
+    #     при добавлении ключа/реализации достаточно убрать "stub".
+    # EN: Below are not yet fully built (stub) or need a key, so we mark
+    #     "stub": True and HIDE them from the filter (they're always empty,
+    #     which confuses users). The code is ready — drop "stub" once a key is
+    #     added or the API is implemented.
+    # DE: Die folgenden sind noch nicht fertig (Stub) oder brauchen einen
+    #     Schlüssel, daher "stub": True und im Filter AUSGEBLENDET. Code ist
+    #     bereit — "stub" entfernen, sobald Schlüssel/Implementierung da ist.
+    {"key": "eures", "name": "EURES", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_eures_jobs, "enabled": True, "needs_key": "EURES_API_KEY", "stub": True},
+    {"key": "findajob", "name": "Find a Job (gov.uk)", "countries": ["GB"], "fn": fetch_findajob_jobs, "enabled": True, "needs_key": "FINDAJOB_API_KEY", "stub": True},
+    {"key": "praca", "name": "Praca.gov.pl", "countries": ["PL"], "fn": fetch_praca_jobs, "enabled": True, "stub": True},
+    {"key": "werkenbijdeoverheid", "name": "WerkenbijdeOverheid", "countries": ["NL"], "fn": fetch_werkenbijdeoverheid_jobs, "enabled": True, "stub": True},
+    {"key": "arztestellen", "name": "Ärztestellen", "countries": ["DE"], "fn": fetch_arztestellen_jobs, "enabled": True, "stub": True},
 ]
 
 SOURCES_BY_KEY = {s["key"]: s for s in SOURCES}
@@ -585,6 +599,12 @@ def list_sources():
     """
     out = []
     for s in SOURCES:
+        # UZ: stub (hali ishlamaydigan) manbalarni filtrда ko'rsatmaymiz.
+        # RU: источники-заглушки (ещё не работают) в фильтре не показываем.
+        # EN: hide stub (not-yet-working) sources from the filter.
+        # DE: Stub-Quellen (noch nicht funktionsfähig) im Filter ausblenden.
+        if s.get("stub"):
+            continue
         needs = s.get("needs_key")
         ready = True if not needs else bool(_get_key(needs))
         out.append({
