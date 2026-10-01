@@ -148,7 +148,7 @@ def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
             "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
         ):
             try:
-                res = requests.get(version_url, headers=headers, params=params, timeout=8)
+                res = requests.get(version_url, headers=headers, params=params, timeout=7)
                 res.raise_for_status()
                 data = res.json()
                 break
@@ -551,7 +551,15 @@ def fetch_arztestellen_jobs(query="", sector="all", country="DE"):
 SOURCES = [
     {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True},
     {"key": "arbetsformedlingen", "name": "Arbetsförmedlingen", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobs, "enabled": True},
-    {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True},
+    # UZ: JobStream "og'ir" (katta snapshot) — faqat o'zi tanlanganда ishlaydi,
+    #     "barcha manbalar"да chaqirilmaydi (aks holda sahifa sekinlashadi).
+    # RU: JobStream "тяжёлый" (большой snapshot) — работает только при прямом
+    #     выборе, не вызывается в режиме "все источники".
+    # EN: JobStream is "heavy" (big snapshot) — only runs when selected directly,
+    #     not in the "all sources" mode (otherwise the page gets slow).
+    # DE: JobStream ist "schwer" (großer Snapshot) — läuft nur bei direkter
+    #     Auswahl, nicht im "alle Quellen"-Modus.
+    {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True, "heavy": True},
     {"key": "arbeitnow", "name": "Arbeitnow", "countries": ["DE"], "fn": fetch_arbeitnow_jobs, "enabled": True},
     {"key": "adzuna", "name": "Adzuna", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_adzuna_jobs, "enabled": True, "needs_key": "ADZUNA_APP_ID"},
     {"key": "eures", "name": "EURES", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_eures_jobs, "enabled": True, "needs_key": "EURES_API_KEY"},
@@ -624,18 +632,55 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
             print(f"[{source} dispatch xatosi] {e}")
         return jobs
 
-    # UZ: 2-holat — "barcha manbalar": mamlakatga mos yoqilganlarini chaqiramiz.
-    # RU: Случай 2 — "все источники": вызываем подходящие по стране.
-    # EN: Case 2 — "all sources": call the enabled ones that match the country.
-    # DE: Fall 2 — "alle Quellen": passende aktivierte je nach Land aufrufen.
+    # UZ: 2-holat — "barcha manbalar". Mos keladigan manbalarni PARALLEL (bir
+    #     vaqtda) chaqiramiz — shunda sekin/ishlamaydigan manba (masalan
+    #     Bundesagentur timeout) qolganlarini BLOKLAMAYDI va tez manbalar
+    #     (Arbetsförmedlingen, Arbeitnow, Adzuna) darhol chiqadi. "Og'ir"
+    #     manbalar (JobStream) bu rejimда chaqirilmaydi.
+    # RU: Случай 2 — "все источники". Вызываем подходящие ПАРАЛЛЕЛЬНО — медленный
+    #     источник (например, таймаут Bundesagentur) не блокирует остальные, и
+    #     быстрые (Arbetsförmedlingen, Arbeitnow, Adzuna) появляются сразу.
+    #     "Тяжёлые" источники (JobStream) в этом режиме не вызываются.
+    # EN: Case 2 — "all sources". Call the matching ones CONCURRENTLY so a slow
+    #     or failing source (e.g. a Bundesagentur timeout) does not block the
+    #     others, and the fast ones (Arbetsförmedlingen, Arbeitnow, Adzuna) show
+    #     up right away. "Heavy" sources (JobStream) are skipped in this mode.
+    # DE: Fall 2 — "alle Quellen". Passende Quellen PARALLEL aufrufen, damit eine
+    #     langsame/fehlerhafte Quelle (z. B. Bundesagentur-Timeout) die anderen
+    #     nicht blockiert. "Schwere" Quellen (JobStream) werden hier übersprungen.
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    targets = []
     for s in SOURCES:
-        if not s.get("enabled"):
+        if not s.get("enabled") or s.get("heavy"):
             continue
         if country != "ALL" and country not in s["countries"]:
             continue
+        targets.append(s)
+
+    if not targets:
+        return jobs
+
+    def _run(s):
+        use_country = country if country != "ALL" else (s["countries"][0] if s["countries"] else "ALL")
+        return s["fn"](query=query, sector=sector, country=use_country) or []
+
+    # UZ: Umumiy kutish chegarasi — 15 soniyada ulgurmagan manba tashlab ketiladi.
+    # RU: Общий лимит ожидания — источник, не успевший за 15 с, пропускается.
+    # EN: Overall wait budget — any source not done within 15s is skipped.
+    # DE: Gesamt-Wartebudget — eine Quelle, die nicht in 15 s fertig ist, wird übersprungen.
+    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
+        future_to_src = {pool.submit(_run, s): s for s in targets}
         try:
-            use_country = country if country != "ALL" else (s["countries"][0] if s["countries"] else "ALL")
-            jobs += s["fn"](query=query, sector=sector, country=use_country) or []
+            for fut in as_completed(future_to_src, timeout=12):
+                s = future_to_src[fut]
+                try:
+                    jobs += fut.result() or []
+                except Exception as e:
+                    print(f"[{s['key']} dispatch xatosi] {e}")
         except Exception as e:
-            print(f"[{s['key']} dispatch xatosi] {e}")
+            # UZ: umumiy vaqt tugadi — ulgurgan natijalar baribir qaytadi.
+            # EN: overall time budget hit — whatever finished is still returned.
+            print(f"[get_jobs: umumiy vaqt chegarasi] {e}")
+
     return jobs

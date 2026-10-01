@@ -131,7 +131,7 @@ button { font: inherit; cursor: pointer; }
   width: 100%;
   max-width: 1140px;
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 6px 10px;
   /* UZ: bir qatorda qolsin — ikkinchi qatorga o'tib "semiz" bo'lib ketmasin.
      RU: пусть остаётся в одну строку — не разрастается во вторую ("толстым").
      EN: keep it on a single row — don't let it wrap into a fat second row.
@@ -151,19 +151,19 @@ button { font: inherit; cursor: pointer; }
   background: transparent; color: var(--foreground); cursor: pointer;
 }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-family: "Space Grotesk", sans-serif; }
-.brand .mark { height: 34px; width: 34px; overflow: hidden; position: relative; border-radius: 10px; }
+.brand .mark { height: 30px; width: 30px; overflow: hidden; position: relative; border-radius: 10px; }
 .brand .mark img { position: absolute; left: 50%; top: 0; width: 112px; transform: translateX(-50%); transition: transform 0.3s; }
 .brand:hover .mark img { transform: translateX(-50%) rotate(-6deg) scale(1.07); }
 .brand span i { color: var(--primary); font-style: normal; }
 
-.nav-links { display: flex; gap: 4px; margin: 0 auto; padding: 4px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 6%, transparent); }
-.nav-links a { padding: 6px 16px; border-radius: 999px; font-size: 14px; color: var(--muted-fg); transition: 0.25s; }
+.nav-links { display: flex; gap: 4px; margin: 0 auto; padding: 3px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 6%, transparent); }
+.nav-links a { padding: 5px 14px; border-radius: 999px; font-size: 13.5px; color: var(--muted-fg); transition: 0.25s; }
 .nav-links a:hover { color: var(--foreground); }
 .nav-links a.active { background: var(--secondary); color: var(--foreground); }
 
 .nav-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .icon-btn {
-  height: 32px; width: 32px; display: grid; place-items: center;
+  height: 30px; width: 30px; display: grid; place-items: center;
   border-radius: 999px; border: 1px solid var(--border);
   background: transparent; color: var(--foreground); transition: 0.25s;
 }
