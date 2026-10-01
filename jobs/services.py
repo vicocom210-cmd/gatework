@@ -577,7 +577,15 @@ def fetch_eures_jobs(query="", sector="all", country="DE"):
                     apply_url=apply_url,
                     sector=sector,
                     source_name="EURES",
-                    posted=(it.get("modificationDate") or it.get("creationDate") or "")[:10],
+                    # UZ: sana ba'zan RAQAM (timestamp) bo'lib keladi — str() qilamiz,
+                    #     aks holda int[:10] xato beradi ("int not subscriptable").
+                    # RU: дата иногда ЧИСЛО (timestamp) — приводим к str(), иначе int[:10]
+                    #     даёт ошибку.
+                    # EN: the date sometimes arrives as a NUMBER (timestamp) — cast to
+                    #     str(), otherwise int[:10] raises "int not subscriptable".
+                    # DE: das Datum kommt manchmal als ZAHL (Timestamp) — str() casten,
+                    #     sonst int[:10] Fehler.
+                    posted=str(it.get("modificationDate") or it.get("creationDate") or "")[:10],
                 ))
             except Exception as e:
                 print(f"[EURES bitta e'lon xatosi] {e}")
@@ -669,7 +677,19 @@ def fetch_arztestellen_jobs(query="", sector="all", country="DE"):
 #     und ein enabled-Flag. Die "Quellen-Filter"-Buttons im Frontend kommen
 #     über /api/sources aus dieser Liste.
 SOURCES = [
-    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True},
+    # UZ: Bundesagentur hozircha YASHIRIN (stub) — ularning API'si (rest.arbeitsagentur.de)
+    #     bu tarmoqда 403/timeout beryapti (geo-blok ehtimoli). Kod tayyor; tarmoq
+    #     ruxsat berса yoki serverда ishlаса, "stub"ni olib tashlang. Germaniyani
+    #     Adzuna + EURES + Arbeitnow qamraydi.
+    # RU: Bundesagentur пока СКРЫТ (stub) — их API даёт 403/timeout в этой сети
+    #     (возможно, геоблок). Код готов; уберите "stub", когда сеть/сервер позволит.
+    #     Германию покрывают Adzuna + EURES + Arbeitnow.
+    # EN: Bundesagentur is HIDDEN for now (stub) — their API returns 403/timeout on
+    #     this network (likely geo-blocked). The code is ready; drop "stub" once the
+    #     network/server allows it. Germany is covered by Adzuna + EURES + Arbeitnow.
+    # DE: Bundesagentur vorerst AUSGEBLENDET (stub) — ihre API liefert 403/Timeout in
+    #     diesem Netz (evtl. Geoblock). Code ist bereit; "stub" entfernen, wenn möglich.
+    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True, "stub": True},
     {"key": "arbetsformedlingen", "name": "Arbetsförmedlingen", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobs, "enabled": True},
     # UZ: JobStream "og'ir" (katta snapshot) — faqat o'zi tanlanganда ishlaydi,
     #     "barcha manbalar"да chaqirilmaydi (aks holda sahifa sekinlashadi).
@@ -681,7 +701,15 @@ SOURCES = [
     #     Auswahl, nicht im "alle Quellen"-Modus.
     {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True, "heavy": True},
     {"key": "arbeitnow", "name": "Arbeitnow", "countries": ["DE"], "fn": fetch_arbeitnow_jobs, "enabled": True},
-    {"key": "adzuna", "name": "Adzuna", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_adzuna_jobs, "enabled": True, "needs_key": "ADZUNA_APP_ID"},
+    # UZ: Adzuna'да Shvetsiya (SE) YO'Q — shuning uchun SE'ni qo'ymaymiz (404 berardi).
+    #     Shvetsiyani Arbetsförmedlingen va EURES qamraydi.
+    # RU: В Adzuna НЕТ Швеции (SE) — не указываем её (давала 404). Швецию
+    #     покрывают Arbetsförmedlingen и EURES.
+    # EN: Adzuna has NO Sweden (SE) — so we omit it (it returned 404). Sweden is
+    #     covered by Arbetsförmedlingen and EURES.
+    # DE: Adzuna hat KEIN Schweden (SE) — daher weggelassen (gab 404). Schweden
+    #     deckt Arbetsförmedlingen und EURES ab.
+    {"key": "adzuna", "name": "Adzuna", "countries": ["DE", "GB", "PL", "NL"], "fn": fetch_adzuna_jobs, "enabled": True, "needs_key": "ADZUNA_APP_ID"},
     # UZ: Quyidagilar hali TO'LIQ yozilmаган (stub) yoki kalit kerak — shuning
     #     uchun "stub": True bilan belgilaymiz va filtrда KO'RSATMAYMIZ (doim
     #     bo'sh bo'lgani uchun foydalanuvchini chalkashtirmasin). Kod tayyor —
