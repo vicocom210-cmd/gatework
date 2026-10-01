@@ -132,6 +132,23 @@ button { font: inherit; cursor: pointer; }
   max-width: 1140px;
   border-radius: 999px;
   padding: 8px 14px;
+  /* UZ: bir qatorda qolsin — ikkinchi qatorga o'tib "semiz" bo'lib ketmasin.
+     RU: пусть остаётся в одну строку — не разрастается во вторую ("толстым").
+     EN: keep it on a single row — don't let it wrap into a fat second row.
+     DE: in einer Zeile halten — nicht in eine zweite Zeile ("dick") umbrechen. */
+  flex-wrap: nowrap;
+}
+.nav .brand { flex-shrink: 0; }
+/* UZ: hamburger tugmasi — kompyuterда yashirin, mobilда ko'rinadi.
+   RU: кнопка-гамбургер — скрыта на ПК, видна на мобильном.
+   EN: hamburger button — hidden on desktop, shown on mobile.
+   DE: Hamburger-Button — auf dem Desktop versteckt, mobil sichtbar. */
+.nav-burger {
+  display: none;
+  height: 36px; width: 38px; flex-shrink: 0;
+  place-items: center; font-size: 18px;
+  border-radius: 999px; border: 1px solid var(--border);
+  background: transparent; color: var(--foreground); cursor: pointer;
 }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-family: "Space Grotesk", sans-serif; }
 .brand .mark { height: 34px; width: 34px; overflow: hidden; position: relative; border-radius: 10px; }
@@ -202,10 +219,21 @@ button { font: inherit; cursor: pointer; }
 .pill {
   border-radius: 999px; padding: 9px 16px; font-size: 14px; border: 1px solid var(--border);
   background: color-mix(in oklab, var(--foreground) 3%, transparent);
-  color: var(--muted-fg); transition: 0.25s;
+  color: var(--muted-fg); transition: 0.25s; white-space: nowrap; cursor: pointer;
 }
 .pill:hover { color: var(--foreground); transform: translateY(-2px); }
 .pill.active { background: var(--primary); color: var(--primary-fg); font-weight: 600; box-shadow: var(--shadow-glow); border-color: transparent; }
+/* UZ: Manba (platforma) filtri — ikkinchi daraja, shuning uchun kichikroq va
+       mamlakat tugmalaridan biroz pastda. Shunda tartibli ko'rinadi.
+   RU: Фильтр источников — второстепенный, поэтому мельче и чуть ниже кнопок
+       стран. Так выглядит аккуратнее.
+   EN: Source (platform) filter — secondary, so smaller and a bit below the
+       country buttons. Keeps it tidy.
+   DE: Quellen-(Plattform-)Filter — zweitrangig, daher kleiner und etwas unter
+       den Länder-Buttons. Bleibt übersichtlich. */
+[data-source-pills] { margin-top: 10px; }
+[data-source-pills] .pill { padding: 7px 13px; font-size: 13px; }
+[data-source-pills] .pill small { opacity: .7; font-size: .85em; }
 
 .filters { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border-radius: 24px; padding: 16px; margin-top: 24px; }
 .switch { display: inline-flex; align-items: center; gap: 10px; border: 0; background: transparent; color: var(--muted-fg); font-size: 14px; }
@@ -777,3 +805,116 @@ body.intro-lock { overflow: hidden; }
 .att-file .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .att-file .ico { font-size: 1.3rem; }
 .thread .chat-form .chat-tool { width: 2.5rem; height: 2.5rem; }
+/* ============================================================================
+   RESPONSIVE — mobil / planshet moslashuvi
+   UZ: Ekran kichrayganда navbar hamburger menyuga aylanadi, pills suriladi,
+       hero va kartalar telefonga moslashadi.
+   RU: На малых экранах навбар превращается в гамбургер-меню, pills
+       прокручиваются, hero и карточки адаптируются под телефон.
+   EN: On small screens the navbar becomes a hamburger menu, the pills scroll,
+       and the hero and cards adapt to the phone.
+   DE: Auf kleinen Bildschirmen wird die Navbar zum Hamburger-Menü, die Pills
+       scrollen, und Hero und Karten passen sich dem Telefon an.
+   ============================================================================ */
+
+/* UZ: Planshet — joy tejash uchun valyuta tugmasini yashiramiz.
+   RU: Планшет — прячем переключатель валюты для экономии места.
+   EN: Tablet — hide the currency switch to save space.
+   DE: Tablet — Währungsumschalter ausblenden, um Platz zu sparen. */
+@media (max-width: 1024px) {
+  [data-currency-switch] { display: none; }
+  .nav { gap: 8px; }
+}
+
+/* UZ: Kichik planshet / katta telefon — markaziy havolalar hamburgerga kiradi.
+   RU: Малый планшет / большой телефон — центральные ссылки уходят в гамбургер.
+   EN: Small tablet / large phone — the centre links move into the hamburger.
+   DE: Kleines Tablet / großes Telefon — die mittleren Links wandern ins Hamburger-Menü. */
+@media (max-width: 900px) {
+  .nav { position: relative; }
+  .nav-burger { display: grid; }
+  .nav-links {
+    position: absolute; top: calc(100% + 10px); left: 0; right: 0;
+    flex-direction: column; margin: 0; padding: 8px; gap: 2px;
+    border: 1px solid var(--border); border-radius: 18px;
+    background: var(--background); box-shadow: var(--shadow-glow);
+    display: none; z-index: 70;
+  }
+  .nav.open .nav-links { display: flex; }
+  .nav-links a { text-align: center; padding: 10px; }
+  /* UZ: aloqa tugmasi faqat belgi (matn yashirin) — joy tejaladi.
+     RU: кнопка контакта только значок (текст скрыт) — экономия места.
+     EN: contact button icon only (text hidden) — saves space.
+     DE: Kontakt-Button nur Symbol (Text versteckt) — spart Platz. */
+  .contact-btn .txt { display: none; }
+  .contact-btn { padding: 6px 10px; }
+}
+
+/* UZ: Telefon — eng ixcham holat.
+   RU: Телефон — самый компактный вид.
+   EN: Phone — the most compact layout.
+   DE: Telefon — das kompakteste Layout. */
+@media (max-width: 620px) {
+  .nav-outer { padding: 8px 6px 0; }
+  .nav { gap: 5px; padding: 5px 8px; }
+  .brand span:last-child { display: none; }      /* faqat logo belgisi qoladi */
+  .brand .mark { height: 30px; width: 30px; }
+  .lang-switch { display: none; }                /* til: planshet/PC da o'zgaradi */
+  .nav-right { gap: 5px; margin-left: auto; }
+  .nav-burger { height: 34px; width: 34px; font-size: 16px; }
+  .icon-btn { height: 30px; width: 30px; }
+  /* UZ: aloqa tugmasi telefonда faqat belgi (pastдаги suzuvchi tugma ham bor).
+     RU: кнопка контакта на телефоне только значок (внизу есть плавающая).
+     EN: contact button icon-only on phone (there is also a floating one).
+     DE: Kontakt-Button am Telefon nur Symbol (unten gibt es einen schwebenden). */
+  .contact-btn { padding: 5px 8px; }
+  .contact-btn .dot { display: none; }
+  .btn-ghost, .btn-primary { padding: 6px 10px; font-size: 12px; }
+  .user-btn em { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .hero { padding: 110px 0 50px; }
+  .searchbar { flex-wrap: wrap; }
+  .searchbar input { width: 100%; }
+  .stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat { padding: 14px 8px; }
+}
+
+/* UZ: Juda tor telefon — login tugmasini yashirib, faqat "Ro'yxatdan o'tish"
+       qoldiramiz (login sahifasiдан kirish ham mumkin). Shunda sig'adi.
+   RU: Очень узкий телефон — скрываем "Войти", оставляем только "Регистрацию".
+   EN: Very narrow phone — hide the login link, keep only "Sign up" (you can
+       still log in from the signup page). This makes it fit.
+   DE: Sehr schmales Telefon — Login ausblenden, nur "Registrieren" behalten. */
+@media (max-width: 440px) {
+  .nav-auth .btn-ghost { display: none; }
+}
+
+/* UZ: Pills (mamlakat + manba) — telefonда ko'p qatorga yoyilmasin, bitta
+       qatorда barmoq bilan suriladi (swipe). Shunda tartibli ko'rinadi.
+   RU: Pills (страны + источники) — на телефоне не расползаются на много строк,
+       а прокручиваются пальцем в одну строку (swipe). Аккуратно.
+   EN: Pills (countries + sources) — on phones they don't sprawl over many rows;
+       they scroll in one line with a swipe. Keeps it tidy.
+   DE: Pills (Länder + Quellen) — auf Telefonen nicht über viele Zeilen; sie
+       scrollen in einer Zeile per Wisch. Bleibt ordentlich. */
+@media (max-width: 760px) {
+  .pills {
+    flex-wrap: nowrap; justify-content: flex-start;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px; scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+  .pills::-webkit-scrollbar { display: none; }
+  .pill { flex: 0 0 auto; scroll-snap-align: start; }
+  .grid { grid-template-columns: 1fr; }          /* kartalar bitta ustun */
+}
+
+/* UZ: Juda kichik telefon (eski modellar).
+   RU: Очень маленький телефон (старые модели).
+   EN: Very small phone (older models).
+   DE: Sehr kleines Telefon (ältere Modelle). */
+@media (max-width: 380px) {
+  .brand .mark { height: 30px; width: 30px; }
+  .hero h1 { font-size: 2rem; }
+  .stat b { font-size: 1.4rem; }
+}

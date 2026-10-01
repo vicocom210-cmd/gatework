@@ -773,8 +773,37 @@ async function renderAll() {
   initReveal();
   renderNavAuth();
   initContactMenu();
+  initNavBurger();
   if (window.GWChat) GWChat.refresh();
   renderJobs();
+}
+
+/* UZ: Mobil hamburger menyu — tugma bosilganda navbarдаги havolalarni ochadi/yopadi.
+   RU: Мобильное меню-гамбургер — по клику открывает/закрывает ссылки навбара.
+   EN: Mobile hamburger menu — toggles the navbar links open/closed on click.
+   DE: Mobiles Hamburger-Menü — öffnet/schließt die Navbar-Links per Klick. */
+function initNavBurger() {
+  const burger = document.querySelector("[data-nav-toggle]");
+  const nav = document.querySelector(".nav");
+  if (!burger || !nav || burger.dataset.bound) return;
+  burger.dataset.bound = "1";
+
+  burger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = nav.classList.toggle("open");
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+  // UZ: menyuдан tashqariga bosilsa yoki havola bosilsa — yopamiz.
+  // RU: клик вне меню или по ссылке — закрываем.
+  // EN: clicking outside the menu or on a link — close it.
+  // DE: Klick außerhalb des Menüs oder auf einen Link — schließen.
+  document.addEventListener("click", () => {
+    nav.classList.remove("open");
+    burger.setAttribute("aria-expanded", "false");
+  });
+  nav.querySelectorAll(".nav-links a").forEach((a) =>
+    a.addEventListener("click", () => nav.classList.remove("open")),
+  );
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

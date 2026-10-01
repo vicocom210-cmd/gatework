@@ -32,6 +32,11 @@
 
 <div class="nav-outer">
   <nav class="nav glass">
+    <!-- UZ: Mobil menyu tugmasi (hamburger) — faqat kichik ekranda ko'rinadi.
+         RU: Кнопка мобильного меню (гамбургер) — видна только на малом экране.
+         EN: Mobile menu button (hamburger) — shown only on small screens.
+         DE: Mobiler Menü-Button (Hamburger) — nur auf kleinen Bildschirmen. -->
+    <button class="nav-burger" type="button" data-nav-toggle aria-label="Menyu" aria-expanded="false">☰</button>
     <a class="brand" href="{% url 'index' %}">
       <span class="mark">
         <img data-logo
