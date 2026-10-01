@@ -154,6 +154,8 @@ const STRINGS = {
   contactBtn: { uz: "Admin bilan bog'lanish", ru: "Связаться с админом", en: "Contact admin", de: "Admin kontaktieren" },
   contactTitle: { uz: "Biz bilan bog'laning", ru: "Свяжитесь с нами", en: "Get in touch", de: "Kontaktieren Sie uns" },
   contactTg: { uz: "Telegram orqali yozish", ru: "Написать в Telegram", en: "Message on Telegram", de: "Über Telegram schreiben" },
+  contactChannel: { uz: "Telegram kanalimiz", ru: "Наш Telegram-канал", en: "Our Telegram channel", de: "Unser Telegram-Kanal" },
+  contactInsta: { uz: "Instagram sahifamiz", ru: "Наш Instagram", en: "Our Instagram", de: "Unser Instagram" },
   contactMail: { uz: "Gmail orqali yozish", ru: "Написать на Gmail", en: "Email via Gmail", de: "Über Gmail schreiben" },
   contactChat: { uz: "Saytda jonli chat", ru: "Живой чат на сайте", en: "Live chat on site", de: "Live-Chat auf der Seite" },
   contactChatSub: { uz: "Admin shu yerda javob beradi", ru: "Админ ответит прямо здесь", en: "Admin replies right here", de: "Admin antwortet direkt hier" },

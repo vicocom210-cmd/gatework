@@ -71,12 +71,29 @@
         </button>
         <div class="contact-pop glass">
           <p class="contact-head" data-t="contactTitle"></p>
-          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram }}" target="_blank" rel="noopener noreferrer">
+          <!-- UZ: Telegram ADMIN (yozish) / RU: Telegram-АДМИН / EN: Telegram ADMIN / DE: Telegram-ADMIN -->
+          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_admin }}" target="_blank" rel="noopener noreferrer">
             <span class="ci tg">✈</span>
-            <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram }}</small></span>
-            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram }}" title="Copy">⧉</button>
+            <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram_admin }}</small></span>
+            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_admin }}" title="Copy">⧉</button>
           </a>
-          <a class="contact-item" href="mailto:{{ CONTACT.email }}?subject=Gate%20Work" target="_blank" rel="noopener noreferrer">
+          <!-- UZ: Telegram KANAL / RU: Telegram-КАНАЛ / EN: Telegram CHANNEL / DE: Telegram-KANAL -->
+          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_channel }}" target="_blank" rel="noopener noreferrer">
+            <span class="ci tg">📣</span>
+            <span class="ct"><b data-t="contactChannel"></b><small>@{{ CONTACT.telegram_channel }}</small></span>
+            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_channel }}" title="Copy">⧉</button>
+          </a>
+          <!-- UZ: Instagram / RU: Instagram / EN: Instagram / DE: Instagram -->
+          <a class="contact-item" href="https://www.instagram.com/{{ CONTACT.instagram }}" target="_blank" rel="noopener noreferrer">
+            <span class="ci ig">◙</span>
+            <span class="ct"><b data-t="contactInsta"></b><small>@{{ CONTACT.instagram }}</small></span>
+            <button type="button" class="copy" data-copy="@{{ CONTACT.instagram }}" title="Copy">⧉</button>
+          </a>
+          <!-- UZ: Gmail — xat yozish oynasini ochadi (compose), oddiy google emas.
+               RU: Gmail — открывает окно написания письма (compose), не просто google.
+               EN: Gmail — opens the compose window, not just google.
+               DE: Gmail — öffnet das Verfassen-Fenster (compose), nicht nur google. -->
+          <a class="contact-item" href="{{ CONTACT.gmail_compose }}" target="_blank" rel="noopener noreferrer">
             <span class="ci gm">✉</span>
             <span class="ct"><b data-t="contactMail"></b><small>{{ CONTACT.email }}</small></span>
             <button type="button" class="copy" data-copy="{{ CONTACT.email }}" title="Copy">⧉</button>

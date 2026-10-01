@@ -49,6 +49,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # UZ/RU/EN/DE: aloqa havolalari (Telegram/Instagram/Gmail) — har sahifaga
+                'pages.context_processors.contact',
             ],
         },
     },
