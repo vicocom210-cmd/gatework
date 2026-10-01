@@ -192,7 +192,7 @@ def fetch_arbetsformedlingen_jobs(query="", sector="all", country="SE"):
     EN: Sweden — Arbetsförmedlingen JobSearch (JobTech) API, free and open.
     DE: Schweden — Arbetsförmedlingen JobSearch (JobTech) API, kostenlos und offen.
     """
-    MAX_PAGES = 3
+    MAX_PAGES = 1
     PAGE_SIZE = 100
 
     sector_keyword = SECTOR_TO_SE_KEYWORD.get(sector, "")
@@ -637,53 +637,55 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
     source = source or "all"
     jobs = []
 
-    # UZ: 1-holat — aniq bitta manba so'ralgan.
-    # RU: Случай 1 — запрошен конкретный источник.
-    # EN: Case 1 — a specific source was requested.
-    # DE: Fall 1 — eine bestimmte Quelle wurde angefragt.
-    if source != "all":
-        s = SOURCES_BY_KEY.get(source)
-        if not s or not s.get("enabled"):
-            return []
-        try:
-            use_country = country if country != "ALL" else (s["countries"][0] if s["countries"] else "ALL")
-            jobs += s["fn"](query=query, sector=sector, country=use_country) or []
-        except Exception as e:
-            print(f"[{source} dispatch xatosi] {e}")
+    # UZ: (manba, mamlakat) juftliklari ro'yxatini yasaymiz. MUHIM: Adzuna kabi
+    #     ko'p-mamlakatli manba uchun HAR BIR mamlakatga ALOHIDA so'rov kerak —
+    #     aks holda faqat birinchi mamlakat (DE) keladi. Shuning uchun ALL
+    #     rejimда har mamlakat uchun alohida vazifa ochamiz.
+    # RU: Строим список пар (источник, страна). ВАЖНО: для многострановых источников
+    #     (Adzuna) нужен ОТДЕЛЬНЫЙ запрос на КАЖДУЮ страну — иначе придёт только
+    #     первая (DE). Поэтому в режиме ALL создаём задачу на каждую страну.
+    # EN: Build a list of (source, country) pairs. IMPORTANT: a multi-country
+    #     source (Adzuna) needs a SEPARATE request PER country — otherwise only
+    #     the first one (DE) comes back. So in ALL mode we add one task per country.
+    # DE: Liste von (Quelle, Land)-Paaren. WICHTIG: eine Mehrländer-Quelle (Adzuna)
+    #     braucht pro Land eine EIGENE Anfrage — sonst kommt nur das erste (DE).
+    #     Daher im ALL-Modus pro Land eine Aufgabe.
+    def _pick_sources():
+        if source != "all":
+            s = SOURCES_BY_KEY.get(source)
+            return [s] if (s and s.get("enabled")) else []
+        # UZ: "barcha manbalar" — stub va "og'ir"(JobStream) larни o'tkazamiz.
+        # RU: "все источники" — пропускаем stub и "тяжёлые" (JobStream).
+        # EN: "all sources" — skip stubs and "heavy" (JobStream).
+        # DE: "alle Quellen" — Stubs und "schwere" (JobStream) überspringen.
+        return [s for s in SOURCES if s.get("enabled") and not s.get("heavy") and not s.get("stub")]
+
+    tasks = []  # (source, country) — har biri bitta so'rov / one request each
+    for s in _pick_sources():
+        if country != "ALL":
+            # UZ: aniq mamlakat so'ralgan — manba shu mamlakatni qamrasagina.
+            # RU: запрошена конкретная страна — только если источник её покрывает.
+            # EN: a specific country was asked — only if the source covers it.
+            # DE: ein bestimmtes Land — nur wenn die Quelle es abdeckt.
+            if s["countries"] and country not in s["countries"]:
+                continue
+            tasks.append((s, country))
+        else:
+            # UZ: ALL — manba qamragan HAR BIR mamlakat uchun alohida so'rov.
+            # RU: ALL — отдельный запрос на КАЖДУЮ страну источника.
+            # EN: ALL — one request per EACH country the source covers.
+            # DE: ALL — eine Anfrage pro Land der Quelle.
+            for c in (s["countries"] or ["ALL"]):
+                tasks.append((s, c))
+
+    if not tasks:
         return jobs
 
-    # UZ: 2-holat — "barcha manbalar". Mos keladigan manbalarni PARALLEL (bir
-    #     vaqtda) chaqiramiz — shunda sekin/ishlamaydigan manba (masalan
-    #     Bundesagentur timeout) qolganlarini BLOKLAMAYDI va tez manbalar
-    #     (Arbetsförmedlingen, Arbeitnow, Adzuna) darhol chiqadi. "Og'ir"
-    #     manbalar (JobStream) bu rejimда chaqirilmaydi.
-    # RU: Случай 2 — "все источники". Вызываем подходящие ПАРАЛЛЕЛЬНО — медленный
-    #     источник (например, таймаут Bundesagentur) не блокирует остальные, и
-    #     быстрые (Arbetsförmedlingen, Arbeitnow, Adzuna) появляются сразу.
-    #     "Тяжёлые" источники (JobStream) в этом режиме не вызываются.
-    # EN: Case 2 — "all sources". Call the matching ones CONCURRENTLY so a slow
-    #     or failing source (e.g. a Bundesagentur timeout) does not block the
-    #     others, and the fast ones (Arbetsförmedlingen, Arbeitnow, Adzuna) show
-    #     up right away. "Heavy" sources (JobStream) are skipped in this mode.
-    # DE: Fall 2 — "alle Quellen". Passende Quellen PARALLEL aufrufen, damit eine
-    #     langsame/fehlerhafte Quelle (z. B. Bundesagentur-Timeout) die anderen
-    #     nicht blockiert. "Schwere" Quellen (JobStream) werden hier übersprungen.
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    targets = []
-    for s in SOURCES:
-        if not s.get("enabled") or s.get("heavy"):
-            continue
-        if country != "ALL" and country not in s["countries"]:
-            continue
-        targets.append(s)
-
-    if not targets:
-        return jobs
-
-    def _run(s):
-        use_country = country if country != "ALL" else (s["countries"][0] if s["countries"] else "ALL")
-        return s["fn"](query=query, sector=sector, country=use_country) or []
+    def _run(task):
+        s, c = task
+        return s["fn"](query=query, sector=sector, country=c) or []
 
     # UZ: Umumiy kutish chegarasi — 9 soniyada ulgurmagan manba tashlab ketiladi.
     #     MUHIM: `with ThreadPoolExecutor` ISHLATMAYMIZ, chunki u blok oxirida
@@ -701,15 +703,15 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
     # DE: Budget — 9s. WICHTIG: KEIN `with ThreadPoolExecutor`, da es am Blockende
     #     auf ALLE Threads wartet. Stattdessen shutdown(wait=False) — Fertiges
     #     nehmen und sofort zurückgeben.
-    pool = ThreadPoolExecutor(max_workers=len(targets))
-    future_to_src = {pool.submit(_run, s): s for s in targets}
+    pool = ThreadPoolExecutor(max_workers=len(tasks))
+    future_to_task = {pool.submit(_run, task): task for task in tasks}
     try:
-        for fut in as_completed(future_to_src, timeout=9):
-            s = future_to_src[fut]
+        for fut in as_completed(future_to_task, timeout=11):
+            s, c = future_to_task[fut]
             try:
                 jobs += fut.result() or []
             except Exception as e:
-                print(f"[{s['key']} dispatch xatosi] {e}")
+                print(f"[{s['key']}/{c} dispatch xatosi] {e}")
     except Exception as e:
         # UZ: vaqt tugadi — ulgurgan natijalar baribir qaytadi.
         # EN: time budget hit — whatever finished is still returned.
