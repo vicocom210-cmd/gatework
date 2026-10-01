@@ -73,6 +73,13 @@ def _get_key(name):
 # RU: Общие словари "сектор -> ключевое слово". Каждая страна на своём языке.
 # EN: Shared "sector -> keyword" dictionaries. Each country in its own language.
 # DE: Gemeinsame "Sektor -> Stichwort"-Wörterbücher. Jedes Land in seiner Sprache.
+# UZ: Natijalar keshi — (manba, mamlakat, so'z, sektor) -> (vaqt, natija).
+# RU: Кэш результатов — (источник, страна, слово, сектор) -> (время, результат).
+# EN: Results cache — (source, country, query, sector) -> (time, result).
+# DE: Ergebnis-Cache — (Quelle, Land, Wort, Sektor) -> (Zeit, Ergebnis).
+_JOBS_CACHE = {}
+_CACHE_TTL = 180  # soniya / seconds (3 daqiqa / 3 minutes)
+
 SECTOR_TO_DE_KEYWORD = {"medical": "Pflege", "agriculture": "Landwirtschaft", "service": "Service"}
 SECTOR_TO_SE_KEYWORD = {"medical": "vård", "agriculture": "jordbruk", "service": "service"}
 SECTOR_TO_EN_KEYWORD = {"medical": "care", "agriculture": "farm", "service": "service"}
@@ -249,17 +256,28 @@ def fetch_arbetsformedlingen_jobs(query="", sector="all", country="SE"):
     PAGE_SIZE = 100
 
     sector_keyword = SECTOR_TO_SE_KEYWORD.get(sector, "")
-    search_text = f"{query} {sector_keyword}".strip() or sector_keyword
+    search_text = f"{query} {sector_keyword}".strip()
 
     all_hits = []
     for page in range(MAX_PAGES):
         offset = page * PAGE_SIZE
         data = None
+        # UZ: q BO'SH bo'lsa — uni UMUMAN yubormaymiz (bo'sh "q" = 0 natija!).
+        #     q yo'q bo'lsa API barcha e'lonlarni qaytaradi.
+        # RU: если q ПУСТОЙ — НЕ отправляем его вовсе (пустой "q" = 0 результатов!).
+        #     Без q API возвращает все вакансии.
+        # EN: if q is EMPTY — do NOT send it at all (an empty "q" returns 0!).
+        #     Without q the API returns all listings.
+        # DE: wenn q LEER — gar nicht senden (leeres "q" = 0 Treffer!).
+        #     Ohne q liefert die API alle Anzeigen.
+        params = {"limit": PAGE_SIZE, "offset": offset}
+        if search_text:
+            params["q"] = search_text
         for attempt in range(2):
             try:
                 res = requests.get(
                     "https://jobsearch.api.jobtechdev.se/search",
-                    params={"q": search_text, "limit": PAGE_SIZE, "offset": offset},
+                    params=params,
                     headers={"accept": "application/json"},
                     timeout=8,
                 )
@@ -677,19 +695,17 @@ def fetch_arztestellen_jobs(query="", sector="all", country="DE"):
 #     und ein enabled-Flag. Die "Quellen-Filter"-Buttons im Frontend kommen
 #     über /api/sources aus dieser Liste.
 SOURCES = [
-    # UZ: Bundesagentur hozircha YASHIRIN (stub) — ularning API'si (rest.arbeitsagentur.de)
-    #     bu tarmoqда 403/timeout beryapti (geo-blok ehtimoli). Kod tayyor; tarmoq
-    #     ruxsat berса yoki serverда ishlаса, "stub"ni olib tashlang. Germaniyani
-    #     Adzuna + EURES + Arbeitnow qamraydi.
-    # RU: Bundesagentur пока СКРЫТ (stub) — их API даёт 403/timeout в этой сети
-    #     (возможно, геоблок). Код готов; уберите "stub", когда сеть/сервер позволит.
-    #     Германию покрывают Adzuna + EURES + Arbeitnow.
-    # EN: Bundesagentur is HIDDEN for now (stub) — their API returns 403/timeout on
-    #     this network (likely geo-blocked). The code is ready; drop "stub" once the
-    #     network/server allows it. Germany is covered by Adzuna + EURES + Arbeitnow.
-    # DE: Bundesagentur vorerst AUSGEBLENDET (stub) — ihre API liefert 403/Timeout in
-    #     diesem Netz (evtl. Geoblock). Code ist bereit; "stub" entfernen, wenn möglich.
-    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True, "stub": True},
+    # UZ: Bundesagentur filtrда ko'rinadi. ESLATMA: ularning API'si (rest.arbeitsagentur.de)
+    #     ba'zi tarmoqlarda 403/timeout berishi mumkin (geo-blok). Bunday holda bosilganда
+    #     "javob bermadi" yozuvi chiqadi, lekin serverда (boshqa IP) ishlashi mumkin.
+    # RU: Bundesagentur виден в фильтре. ПРИМ.: их API может давать 403/timeout в некоторых
+    #     сетях (геоблок). Тогда покажется "не ответил", но на сервере может работать.
+    # EN: Bundesagentur is visible in the filter. NOTE: their API may return 403/timeout on
+    #     some networks (geo-block); then the "no response" message shows, but it can work
+    #     from a server (different IP).
+    # DE: Bundesagentur im Filter sichtbar. HINWEIS: ihre API kann in manchen Netzen
+    #     403/Timeout liefern (Geoblock); dann erscheint die "keine Antwort"-Meldung.
+    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True},
     {"key": "arbetsformedlingen", "name": "Arbetsförmedlingen", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobs, "enabled": True},
     # UZ: JobStream "og'ir" (katta snapshot) — faqat o'zi tanlanganда ishlaydi,
     #     "barcha manbalar"да chaqirilmaydi (aks holda sahifa sekinlashadi).
@@ -699,7 +715,15 @@ SOURCES = [
     #     not in the "all sources" mode (otherwise the page gets slow).
     # DE: JobStream ist "schwer" (großer Snapshot) — läuft nur bei direkter
     #     Auswahl, nicht im "alle Quellen"-Modus.
-    {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True, "heavy": True},
+    # UZ: JobStream YASHIRIN (stub) — snapshot juda katta, sekin/timeout beradi.
+    #     Shvetsiyani oddiy Arbetsförmedlingen (JobSearch) va EURES qamraydi.
+    # RU: JobStream СКРЫТ (stub) — snapshot слишком большой, медленный/timeout.
+    #     Швецию покрывают обычный Arbetsförmedlingen (JobSearch) и EURES.
+    # EN: JobStream is HIDDEN (stub) — the snapshot is huge and slow/times out.
+    #     Sweden is covered by the normal Arbetsförmedlingen (JobSearch) and EURES.
+    # DE: JobStream AUSGEBLENDET (stub) — der Snapshot ist riesig und langsam.
+    #     Schweden deckt das normale Arbetsförmedlingen (JobSearch) und EURES ab.
+    {"key": "jobstream", "name": "Arbetsförmedlingen (JobStream)", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobstream, "enabled": True, "heavy": True, "stub": True},
     {"key": "arbeitnow", "name": "Arbeitnow", "countries": ["DE"], "fn": fetch_arbeitnow_jobs, "enabled": True},
     # UZ: Adzuna'да Shvetsiya (SE) YO'Q — shuning uchun SE'ni qo'ymaymiz (404 berardi).
     #     Shvetsiyani Arbetsförmedlingen va EURES qamraydi.
@@ -830,10 +854,32 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
         return jobs
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
+    import time as _t
 
     def _run(task):
         s, c = task
-        return s["fn"](query=query, sector=sector, country=c) or []
+        # UZ: KESH — bir xil (manba, mamlakat, so'z, sektor) so'rovni 3 daqiqa
+        #     davomida qayta tashqi API'ga yubormaymiz. Bu Adzuna "429 Too Many
+        #     Requests" xatosini kamaytiradi va sahifani tezlashtiradi.
+        # RU: КЭШ — одинаковый запрос (источник, страна, слово, сектор) 3 минуты
+        #     не шлём повторно во внешний API. Снижает "429" Adzuna и ускоряет.
+        # EN: CACHE — don't re-hit the external API for the same (source, country,
+        #     query, sector) within 3 minutes. Reduces Adzuna "429 Too Many
+        #     Requests" and speeds the page up.
+        # DE: CACHE — gleiche Anfrage (Quelle, Land, Wort, Sektor) 3 Minuten nicht
+        #     erneut an die externe API. Reduziert Adzuna-"429" und beschleunigt.
+        key = (s["key"], c, query or "", sector or "all")
+        hit = _JOBS_CACHE.get(key)
+        if hit and (_t.time() - hit[0]) < _CACHE_TTL:
+            return hit[1]
+        result = s["fn"](query=query, sector=sector, country=c) or []
+        # UZ: faqat natija bo'lsa keshlaymiz (bo'sh/xatoni keshlamaymiz).
+        # RU: кэшируем только непустой результат (пустое/ошибку не кэшируем).
+        # EN: cache only a non-empty result (don't cache empty/errors).
+        # DE: nur nicht-leeres Ergebnis cachen (kein Leeres/Fehler).
+        if result:
+            _JOBS_CACHE[key] = (_t.time(), result)
+        return result
 
     # UZ: Umumiy kutish chegarasi — 9 soniyada ulgurmagan manba tashlab ketiladi.
     #     MUHIM: `with ThreadPoolExecutor` ISHLATMAYMIZ, chunki u blok oxirida
