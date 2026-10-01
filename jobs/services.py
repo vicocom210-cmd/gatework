@@ -122,7 +122,7 @@ def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
     EN: Germany — Bundesagentur für Arbeit Jobsuche API (free, open).
     DE: Deutschland — Bundesagentur für Arbeit Jobsuche-API (kostenlos, offen).
     """
-    MAX_PAGES = 3
+    MAX_PAGES = 1
     PAGE_SIZE = 100
 
     if sector in SECTOR_TO_DE_KEYWORD:
@@ -665,22 +665,43 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
         use_country = country if country != "ALL" else (s["countries"][0] if s["countries"] else "ALL")
         return s["fn"](query=query, sector=sector, country=use_country) or []
 
-    # UZ: Umumiy kutish chegarasi — 15 soniyada ulgurmagan manba tashlab ketiladi.
-    # RU: Общий лимит ожидания — источник, не успевший за 15 с, пропускается.
-    # EN: Overall wait budget — any source not done within 15s is skipped.
-    # DE: Gesamt-Wartebudget — eine Quelle, die nicht in 15 s fertig ist, wird übersprungen.
-    with ThreadPoolExecutor(max_workers=len(targets)) as pool:
-        future_to_src = {pool.submit(_run, s): s for s in targets}
+    # UZ: Umumiy kutish chegarasi — 9 soniyada ulgurmagan manba tashlab ketiladi.
+    #     MUHIM: `with ThreadPoolExecutor` ISHLATMAYMIZ, chunki u blok oxirida
+    #     BARCHA oqimlar tugashini kutadi (sekin manba sahifани osib qo'yadi).
+    #     O'rniga shutdown(wait=False) — ulgurganini olib, darhol qaytamiz;
+    #     sekin manba fonда tugaydi, lekin foydalanuvchi kutmaydi.
+    # RU: Общий лимит — 9 с. ВАЖНО: НЕ используем `with ThreadPoolExecutor`,
+    #     т.к. он ждёт завершения ВСЕХ потоков в конце блока (медленный источник
+    #     подвесит страницу). Вместо этого shutdown(wait=False) — берём успевшее
+    #     и сразу возвращаем.
+    # EN: Overall budget — 9s. IMPORTANT: do NOT use `with ThreadPoolExecutor`,
+    #     because it waits for ALL threads to finish on block exit (a slow source
+    #     would hang the page). Instead shutdown(wait=False) — take what finished
+    #     and return immediately; the slow source finishes in the background.
+    # DE: Budget — 9s. WICHTIG: KEIN `with ThreadPoolExecutor`, da es am Blockende
+    #     auf ALLE Threads wartet. Stattdessen shutdown(wait=False) — Fertiges
+    #     nehmen und sofort zurückgeben.
+    pool = ThreadPoolExecutor(max_workers=len(targets))
+    future_to_src = {pool.submit(_run, s): s for s in targets}
+    try:
+        for fut in as_completed(future_to_src, timeout=9):
+            s = future_to_src[fut]
+            try:
+                jobs += fut.result() or []
+            except Exception as e:
+                print(f"[{s['key']} dispatch xatosi] {e}")
+    except Exception as e:
+        # UZ: vaqt tugadi — ulgurgan natijalar baribir qaytadi.
+        # EN: time budget hit — whatever finished is still returned.
+        print(f"[get_jobs: umumiy vaqt chegarasi] {e}")
+    finally:
+        # UZ: wait=False — tugamagan oqimlarni KUTMAYMIZ, darhol qaytamiz.
+        # EN: wait=False — do NOT wait for unfinished threads, return now.
         try:
-            for fut in as_completed(future_to_src, timeout=12):
-                s = future_to_src[fut]
-                try:
-                    jobs += fut.result() or []
-                except Exception as e:
-                    print(f"[{s['key']} dispatch xatosi] {e}")
-        except Exception as e:
-            # UZ: umumiy vaqt tugadi — ulgurgan natijalar baribir qaytadi.
-            # EN: overall time budget hit — whatever finished is still returned.
-            print(f"[get_jobs: umumiy vaqt chegarasi] {e}")
+            pool.shutdown(wait=False, cancel_futures=True)
+        except TypeError:
+            # UZ: eski Python (3.8) uchun — cancel_futures bo'lmasa.
+            # EN: older Python (3.8) without cancel_futures.
+            pool.shutdown(wait=False)
 
     return jobs
