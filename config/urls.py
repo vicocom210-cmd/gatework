@@ -5,8 +5,10 @@ from django.urls import path, include
 from users.views import (
     RegisterView, LoginView, LogoutView, MeView,
     AdminUsersListView, AdminUserDetailView, AdminStatsView,
+    ProfileView, RatingView, ActivityView,
 )
-from jobs.views import JobsListView, TrackView, ArchiveView, ArchiveClearView
+from jobs.views import JobsListView, TrackView, ArchiveView, ArchiveClearView, SourcesView
+from pages.api import RatesView, PlansView
 
 urlpatterns = [
     # MUHIM: Django'ning O'Z ICHKI admin paneli endi "/django-admin/"da
@@ -28,6 +30,22 @@ urlpatterns = [
     path("api/track", TrackView.as_view()),
     path("api/archive", ArchiveView.as_view()),
     path("api/archive/clear", ArchiveClearView.as_view()),
+
+    # UZ: Manba filtri tugmalari uchun ro'yxat.
+    # RU: Список для кнопок фильтра источников.
+    # EN: The list for the source-filter buttons.
+    # DE: Die Liste für die Quellen-Filter-Buttons.
+    path("api/sources", SourcesView.as_view()),
+
+    # UZ: Ilgari YO'Q bo'lgan (404 bergan) endpointlar — endi ishlaydi.
+    # RU: Ранее ОТСУТСТВОВАВШИЕ (404) эндпоинты — теперь работают.
+    # EN: Previously MISSING (404) endpoints — now working.
+    # DE: Zuvor FEHLENDE (404) Endpunkte — jetzt funktionsfähig.
+    path("api/rates", RatesView.as_view()),
+    path("api/plans", PlansView.as_view()),
+    path("api/activity", ActivityView.as_view()),
+    path("api/profile", ProfileView.as_view()),
+    path("api/rating", RatingView.as_view()),
 
     # MUHIM: eski static/js/auth.js fayli aynan shu (eski Flask'dagi)
     # manzillarga so'rov yuboradi. JS kodini o'zgartirmaslik uchun,

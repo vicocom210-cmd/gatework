@@ -1,0 +1,33 @@
+# ============================================================================
+# GATE WORK — Python kutubxonalari / Python-библиотеки / Python packages /
+#             Python-Bibliotheken
+# ----------------------------------------------------------------------------
+# UZ: O'rnatish:  pip install -r requirements.txt
+# RU: Установка:  pip install -r requirements.txt
+# EN: Install:    pip install -r requirements.txt
+# DE: Installation: pip install -r requirements.txt
+# ============================================================================
+
+# UZ: Asosiy web-framework / RU: основной веб-фреймворк /
+# EN: the main web framework / DE: das Haupt-Web-Framework
+Django>=5.0,<6.0
+
+# UZ: API'lar uchun (views.py APIView) / RU: для API / EN: for the APIs /
+# DE: für die APIs
+djangorestframework>=3.15
+
+# UZ: tashqi ish-qidiruv API'lariga so'rov yuborish uchun /
+# RU: для запросов к внешним API поиска вакансий /
+# EN: for calling external job-search APIs /
+# DE: für den Aufruf externer Jobsuche-APIs
+requests>=2.31
+
+# UZ: IXTIYORIY — Arbetsförmedlingen JobStream (katta JSON oqimi) uchun.
+#     O'rnatilmasa, JobStream manbasi jimgina o'tkazib yuboriladi.
+# RU: НЕОБЯЗАТЕЛЬНО — для Arbetsförmedlingen JobStream (большой поток JSON).
+#     Если не установлен, источник JobStream тихо пропускается.
+# EN: OPTIONAL — for Arbetsförmedlingen JobStream (large JSON stream).
+#     If not installed, the JobStream source is silently skipped.
+# DE: OPTIONAL — für Arbetsförmedlingen JobStream (großer JSON-Stream).
+#     Ohne Installation wird die JobStream-Quelle still übersprungen.
+ijson>=3.2

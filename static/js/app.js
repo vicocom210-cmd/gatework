@@ -202,7 +202,53 @@ try {
   myAssets = [];
 }
 
-const state = { query: "", country: "all", sector: "all", visaOnly: false, period: "all", payMin: "", payMax: "", visa: "any" };
+const state = { query: "", country: "all", source: "all", sector: "all", visaOnly: false, period: "all", payMin: "", payMax: "", visa: "any" };
+
+/* UZ: Manbalar ro'yxatini bir marta /api/sources dan olib, xotirada saqlaymiz.
+   RU: Один раз получаем список источников из /api/sources и кэшируем.
+   EN: Fetch the source list once from /api/sources and cache it.
+   DE: Die Quellenliste einmal aus /api/sources holen und zwischenspeichern. */
+let sourcesCache = null;
+
+async function renderSourcePills() {
+  const wrap = document.querySelector("[data-source-pills]");
+  if (!wrap) return;
+
+  if (sourcesCache === null) {
+    try {
+      const res = await fetch("/api/sources");
+      const data = await res.json();
+      sourcesCache = data.sources || [];
+    } catch (e) {
+      sourcesCache = [];
+    }
+  }
+
+  // UZ: Tanlangan mamlakatga mos manbalarnigina ko'rsatamiz.
+  // RU: Показываем только источники, подходящие выбранной стране.
+  // EN: Show only the sources that match the selected country.
+  // DE: Nur die zum gewählten Land passenden Quellen anzeigen.
+  const visible = sourcesCache.filter(
+    (s) => state.country === "all" || (s.countries || []).includes(state.country),
+  );
+
+  wrap.innerHTML =
+    `<button class="pill ${state.source === "all" ? "active" : ""}" data-source="all">${t("allSources")}</button>` +
+    visible
+      .map(
+        (s) =>
+          `<button class="pill ${state.source === s.key ? "active" : ""}" data-source="${s.key}" title="${s.countries.join(", ")}">${s.name}${s.ready ? "" : ` <small>(${t("sourceNoKey")})</small>`}</button>`,
+      )
+      .join("");
+
+  wrap.querySelectorAll("[data-source]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.source = b.dataset.source;
+      renderFilters();
+      renderJobs();
+    }),
+  );
+}
 
 /* "Menda bor" filtri — foydalanuvchi o'zida bor hujjat/imkoniyatlarni
    tanlaydi, faqat shularga mos keladigan ishlar chiqadi. */
@@ -246,11 +292,26 @@ function renderFilters() {
     cWrap.querySelectorAll("[data-country]").forEach((b) =>
       b.addEventListener("click", () => {
         state.country = b.dataset.country;
+        // UZ: mamlakat o'zgarsa — manba filtrini "barchasi"ga qaytaramiz.
+        // RU: при смене страны сбрасываем фильтр источника на "все".
+        // EN: when the country changes, reset the source filter to "all".
+        // DE: bei Länderwechsel den Quellenfilter auf "alle" zurücksetzen.
+        state.source = "all";
         renderFilters();
         renderJobs();
       }),
     );
   }
+
+  // UZ: Manba (platforma) filtri tugmalari — ro'yxat /api/sources dan keladi.
+  //     Bitta tugma bosilsa — state.source o'zgaradi va faqat o'sha manba keladi.
+  // RU: Кнопки фильтра источников — список из /api/sources. При нажатии меняется
+  //     state.source и приходит только выбранный источник.
+  // EN: Source (platform) filter buttons — the list comes from /api/sources.
+  //     Clicking one sets state.source and only that source is fetched.
+  // DE: Quellen-(Plattform-)Filter-Buttons — Liste aus /api/sources. Ein Klick
+  //     setzt state.source und nur diese Quelle wird geladen.
+  renderSourcePills();
 
   const sWrap = document.querySelector("[data-sector-pills]");
   if (sWrap) {
@@ -300,7 +361,7 @@ function renderFilters() {
   }
 
   const active =
-    (state.country !== "all") + (state.sector !== "all") + (state.period !== "all") +
+    (state.country !== "all") + (state.source !== "all") + (state.sector !== "all") + (state.period !== "all") +
     (state.payMin !== "") + (state.payMax !== "") + (state.visa !== "any") + myAssets.length;
   document.querySelectorAll("[data-filter-count],[data-filter-count2]").forEach((el) => {
     el.textContent = active;
@@ -313,6 +374,7 @@ function renderFilters() {
 async function fetchJobsFromServer() {
   const params = new URLSearchParams({
     country: state.country === "all" ? "ALL" : state.country,
+    source: state.source,
     sector: state.sector,
     query: state.query || "",
     visaOnly: state.visaOnly ? "true" : "false",
@@ -490,7 +552,7 @@ function initJobsControls() {
   if (rs && !rs.dataset.bound) {
     rs.dataset.bound = "1";
     rs.addEventListener("click", () => {
-      Object.assign(state, { country: "all", sector: "all", period: "all", payMin: "", payMax: "", visa: "any", visaOnly: false });
+      Object.assign(state, { country: "all", source: "all", sector: "all", period: "all", payMin: "", payMax: "", visa: "any", visaOnly: false });
       myAssets = [];
       localStorage.setItem(LS_ASSETS, "[]");
       document.querySelectorAll("[data-pay-min],[data-pay-max]").forEach((i) => (i.value = ""));

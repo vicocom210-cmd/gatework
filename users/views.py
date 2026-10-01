@@ -190,13 +190,161 @@ class AdminStatsView(APIView):
         })
 
 
+def _me_public(u):
+    """
+    UZ: Tizimga kirgan foydalanuvchining O'ZI haqidagi ma'lumot (profil
+        sahifasi uchun). profile.js firstName/lastName/birthDate/points/
+        assets/avatar maydonlarini kutadi — shuning uchun hammasini beramiz.
+    RU: Данные о САМОМ вошедшем пользователе (для страницы профиля). profile.js
+        ждёт firstName/lastName/birthDate/points/assets/avatar — отдаём всё.
+    EN: Data about the logged-in user themselves (for the profile page).
+        profile.js expects firstName/lastName/birthDate/points/assets/avatar,
+        so we return all of them.
+    DE: Daten über den angemeldeten Benutzer selbst (für die Profilseite).
+        profile.js erwartet firstName/lastName/birthDate/points/assets/avatar.
+    """
+    return {
+        "id": u.id,
+        "name": f"{u.first_name} {u.last_name}".strip() or u.username,
+        "firstName": u.first_name,
+        "lastName": u.last_name,
+        "birthDate": u.birth_date.isoformat() if u.birth_date else "",
+        "email": u.email,
+        "plan": u.plan,
+        "isAdmin": u.is_staff,
+        "avatar": u.avatar,
+        "points": u.points or 0,
+        "assets": u.assets or [],
+    }
+
+
 class MeView(APIView):
     """Eski Flask'dagi @app.route("/api/me") ekvivalenti."""
     def get(self, request):
         if not request.user.is_authenticated:
             return Response({"ok": False}, status=status.HTTP_401_UNAUTHORIZED)
-        u = request.user
-        return Response({"ok": True, "user": {
-            "id": u.id, "name": u.first_name, "email": u.email,
-            "plan": u.plan, "isAdmin": u.is_staff,
-        }})
+        return Response({"ok": True, "user": _me_public(request.user)})
+
+
+class ProfileView(APIView):
+    """
+    UZ: /api/profile — foydalanuvchi o'z profilini tahrirlaydi (ism, familiya,
+        tug'ilgan sana, parol, ko'nikmalar/assets va avatar rasmi). Avatar
+        fayli media/avatars/ ichiga saqlanadi.
+    RU: /api/profile — пользователь редактирует свой профиль (имя, фамилия,
+        дата рождения, пароль, навыки/assets и аватар). Файл аватара
+        сохраняется в media/avatars/.
+    EN: /api/profile — the user edits their own profile (first/last name,
+        birth date, password, skills/assets and avatar image). The avatar
+        file is saved into media/avatars/.
+    DE: /api/profile — der Benutzer bearbeitet sein Profil (Vor-/Nachname,
+        Geburtsdatum, Passwort, Fähigkeiten/assets und Avatarbild). Die
+        Avatar-Datei wird in media/avatars/ gespeichert.
+    """
+    authentication_classes = [CSRFExemptSessionAuthentication]
+
+    def post(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({"ok": False, "error": "Avval tizimga kiring."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        data = request.data
+        if "firstName" in data:
+            user.first_name = (data.get("firstName") or "").strip()
+        if "lastName" in data:
+            user.last_name = (data.get("lastName") or "").strip()
+        # UZ: bo'sh sana -> None (xato bermasligi uchun).
+        # RU: пустая дата -> None (чтобы не было ошибки).
+        # EN: empty date -> None (to avoid an error).
+        # DE: leeres Datum -> None (um Fehler zu vermeiden).
+        if "birthDate" in data:
+            user.birth_date = (data.get("birthDate") or "").strip() or None
+
+        # UZ: assets — JSON matn ko'rinishida keladi (masalan '["visa"]').
+        # RU: assets приходит в виде JSON-строки (например '["visa"]').
+        # EN: assets arrives as a JSON string (e.g. '["visa"]').
+        # DE: assets kommt als JSON-String (z. B. '["visa"]').
+        if "assets" in data:
+            import json
+            raw = data.get("assets")
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else raw
+                if isinstance(parsed, list):
+                    user.assets = parsed
+            except Exception:
+                pass
+
+        new_password = (data.get("password") or "").strip()
+        if new_password:
+            user.set_password(new_password)
+
+        # UZ: avatar rasmi (ixtiyoriy) — media/avatars/ ichiga yozamiz.
+        # RU: аватар (необязательно) — пишем в media/avatars/.
+        # EN: avatar image (optional) — write it into media/avatars/.
+        # DE: Avatarbild (optional) — in media/avatars/ schreiben.
+        avatar_file = request.FILES.get("avatar")
+        if avatar_file:
+            import os
+            from django.conf import settings
+            folder = os.path.join(settings.MEDIA_ROOT, "avatars")
+            os.makedirs(folder, exist_ok=True)
+            ext = os.path.splitext(avatar_file.name)[1].lower() or ".png"
+            fname = f"user_{user.id}{ext}"
+            with open(os.path.join(folder, fname), "wb") as f:
+                for chunk in avatar_file.chunks():
+                    f.write(chunk)
+            user.avatar = f"{settings.MEDIA_URL}avatars/{fname}"
+
+        user.save()
+        # UZ: parol o'zgargan bo'lsa, sessiya buzilmasligi uchun qayta login.
+        # RU: если пароль изменён — перелогиниваем, чтобы не слетела сессия.
+        # EN: if the password changed, re-login so the session is not dropped.
+        # DE: bei Passwortänderung erneut anmelden, damit die Session bleibt.
+        if new_password:
+            login(request, user)
+        return Response({"ok": True, "user": _me_public(user)})
+
+
+class RatingView(APIView):
+    """
+    UZ: /api/rating — eng faol foydalanuvchilar reytingi (ballar bo'yicha).
+    RU: /api/rating — рейтинг самых активных пользователей (по баллам).
+    EN: /api/rating — the leaderboard of the most active users (by points).
+    DE: /api/rating — die Rangliste der aktivsten Benutzer (nach Punkten).
+    """
+    def get(self, request):
+        top = User.objects.order_by("-points", "-date_joined")[:50]
+        users = []
+        for i, u in enumerate(top, start=1):
+            users.append({
+                "rank": i,
+                "name": f"{u.first_name} {u.last_name}".strip() or u.username,
+                "firstName": u.first_name,
+                "lastName": u.last_name,
+                "avatar": u.avatar,
+                "points": u.points or 0,
+            })
+        return Response({"ok": True, "users": users})
+
+
+class ActivityView(APIView):
+    """
+    UZ: /api/activity — foydalanuvchi faolligini belgilaydi (last_seen'ni
+        yangilaydi). app.js qidiruv/bosish paytida 'ping' yuboradi.
+    RU: /api/activity — отмечает активность пользователя (обновляет last_seen).
+        app.js шлёт 'ping' при поиске/кликах.
+    EN: /api/activity — marks the user as active (updates last_seen). app.js
+        sends a 'ping' on search/clicks.
+    DE: /api/activity — markiert den Benutzer als aktiv (aktualisiert
+        last_seen). app.js sendet bei Suche/Klicks einen 'ping'.
+    """
+    authentication_classes = [CSRFExemptSessionAuthentication]
+
+    def post(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({"ok": False}, status=status.HTTP_401_UNAUTHORIZED)
+        from django.utils import timezone
+        user.last_seen = timezone.now()
+        user.save(update_fields=["last_seen"])
+        return Response({"ok": True})

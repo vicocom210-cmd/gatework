@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from users.views import CSRFExemptSessionAuthentication
-from .services import fetch_bundesagentur_jobs, fetch_arbetsformedlingen_jobs
+from .services import get_jobs, list_sources
 from .models import JobEvent
 
 
@@ -19,23 +19,50 @@ def _plan_active(user):
 
 
 class JobsListView(APIView):
-    """Eski Flask'dagi @app.route("/api/jobs") ekvivalenti (hozircha soddalashtirilgan)."""
+    """
+    UZ: /api/jobs — ishlar ro'yxati. Endi 'source' (manba) filtrini ham
+        qo'llaydi: frontend qaysi tugmani bossa, faqat o'sha manba keladi.
+        Barcha mantiq services.get_jobs() dispetcherida.
+    RU: /api/jobs — список вакансий. Теперь поддерживает фильтр 'source':
+        при нажатии кнопки приходит только выбранный источник. Вся логика
+        в диспетчере services.get_jobs().
+    EN: /api/jobs — the jobs list. Now also supports the 'source' filter:
+        whichever button the frontend clicks, only that source comes back.
+        All logic lives in the services.get_jobs() dispatcher.
+    DE: /api/jobs — die Jobliste. Unterstützt jetzt den 'source'-Filter:
+        je nach angeklicktem Button kommt nur diese Quelle zurück. Die
+        gesamte Logik steckt im Dispatcher services.get_jobs().
+    """
 
     def get(self, request):
         query = request.query_params.get("query", "")
         sector = request.query_params.get("sector", "all")
         country = request.query_params.get("country", "ALL")
+        source = request.query_params.get("source", "all")
 
-        jobs = []
-        if country in ("DE", "ALL"):
-            jobs += fetch_bundesagentur_jobs(query=query, sector=sector)
-        if country in ("SE", "ALL"):
-            jobs += fetch_arbetsformedlingen_jobs(query=query, sector=sector)
+        jobs = get_jobs(query=query, sector=sector, country=country, source=source)
 
-        # MUHIM: eski static/js/app.js javobni TO'G'RIDAN-TO'G'RI massiv
-        # sifatida kutadi ({"count":...,"jobs":[...]} emas) — shuning
-        # uchun to'g'ridan-to'g'ri ro'yxatni qaytaramiz.
+        # UZ: eski app.js javobni TO'G'RIDAN-TO'G'RI massiv sifatida kutadi.
+        # RU: старый app.js ждёт ответ НАПРЯМУЮ как массив.
+        # EN: the old app.js expects the response DIRECTLY as an array.
+        # DE: das alte app.js erwartet die Antwort DIREKT als Array.
         return Response(jobs)
+
+
+class SourcesView(APIView):
+    """
+    UZ: /api/sources — manba filtri tugmalari uchun ro'yxat. Har bir manba
+        nomi, davlatlari va 'ready' (kalit bor-yo'qligi) belgisi bilan.
+    RU: /api/sources — список для кнопок фильтра источников. С именем,
+        странами и признаком 'ready' (есть ли ключ).
+    EN: /api/sources — the list for the source-filter buttons. With each
+        source's name, countries and a 'ready' flag (whether a key exists).
+    DE: /api/sources — die Liste für die Quellen-Filter-Buttons. Mit Name,
+        Ländern und einem 'ready'-Flag (ob ein Schlüssel vorhanden ist).
+    """
+
+    def get(self, request):
+        return Response({"ok": True, "sources": list_sources()})
 
 
 class TrackView(APIView):

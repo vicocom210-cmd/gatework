@@ -1,0 +1,20 @@
+# UZ: Python keshi va muhit fayllari — bularni Git'ga qo'shmaymiz.
+# RU: Кэш Python и файлы окружения — не добавляем в Git.
+# EN: Python cache and environment files — not committed to Git.
+# DE: Python-Cache und Umgebungsdateien — nicht in Git aufnehmen.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+
+# UZ: Foydalanuvchi yuklagan fayllar (avatarlar, chat media)
+# RU: Загруженные пользователями файлы / EN: user-uploaded files /
+# DE: von Benutzern hochgeladene Dateien
+/media/
+
+# IDE
+.idea/
+.vscode/
