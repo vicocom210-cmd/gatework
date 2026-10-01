@@ -115,12 +115,65 @@ def _job(id_, country, city, employer, title, apply_url, sector, source_name, po
 # ===========================================================================
 # 1) BUNDESAGENTUR FÜR ARBEIT (DE) — ochiq, bepul, RASMIY
 # ===========================================================================
+# UZ: MUHIM — bu API endi yangi kalitni talab qiladi. Eski "jobboerse-jobsuche"
+#     kaliti 403 ("No match found") beradi. Hozirgi to'g'ri usul: ommaviy
+#     client_id ni "X-API-Key" sarlavhasida yuborish (OAuth token ham mumkin).
+# RU: ВАЖНО — API теперь требует новый ключ. Старый "jobboerse-jobsuche" даёт 403.
+#     Текущий способ: публичный client_id в заголовке "X-API-Key".
+# EN: IMPORTANT — this API now needs a new key. The old "jobboerse-jobsuche"
+#     returns 403 ("No match found"). The current way: send the public client_id
+#     in the "X-API-Key" header (an OAuth token also works).
+# DE: WICHTIG — die API braucht jetzt einen neuen Schlüssel. Das alte
+#     "jobboerse-jobsuche" liefert 403. Aktuell: öffentliche client_id im
+#     "X-API-Key"-Header senden.
+BA_CLIENT_ID = "c003a37f-024f-462a-b36d-b001be4cd24a"
+BA_CLIENT_SECRET = "32a39620-32b3-4307-9aa1-511e3d7f48a8"
+_ba_token = {"value": None, "exp": 0}
+
+
+def _bundesagentur_headers():
+    """
+    UZ: Avval OAuth token olishga urinamiz (cache bilan), bo'lmasa client_id ni
+        X-API-Key sifatida ishlatamiz — ikkalasi ham rasmiy qabul qilinadi.
+    RU: Сначала пробуем OAuth-токен (с кэшем), иначе client_id как X-API-Key.
+    EN: Try an OAuth token first (cached); otherwise use the client_id as
+        X-API-Key — both are accepted officially.
+    DE: Zuerst OAuth-Token (gecacht), sonst client_id als X-API-Key.
+    """
+    import time as _t
+    now = _t.time()
+    if _ba_token["value"] and now < _ba_token["exp"]:
+        return {"OAuthAccessToken": _ba_token["value"]}
+    try:
+        res = requests.post(
+            "https://rest.arbeitsagentur.de/oauth/gettoken_cc",
+            data={
+                "client_id": BA_CLIENT_ID,
+                "client_secret": BA_CLIENT_SECRET,
+                "grant_type": "client_credentials",
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=7,
+        )
+        res.raise_for_status()
+        tok = res.json()
+        _ba_token["value"] = tok.get("access_token")
+        # UZ: muddatidan 60s oldin yangilaymiz / EN: refresh 60s before expiry
+        _ba_token["exp"] = now + int(tok.get("expires_in", 3600)) - 60
+        if _ba_token["value"]:
+            return {"OAuthAccessToken": _ba_token["value"]}
+    except Exception as e:
+        print(f"[Bundesagentur OAuth xatosi — X-API-Key ga qaytamiz] {e}")
+    # UZ: zaxira usul / EN: fallback
+    return {"X-API-Key": BA_CLIENT_ID}
+
+
 def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
     """
-    UZ: Germaniya — Bundesagentur für Arbeit Jobsuche API (bepul, ochiq).
-    RU: Германия — API Bundesagentur für Arbeit (бесплатный, открытый).
-    EN: Germany — Bundesagentur für Arbeit Jobsuche API (free, open).
-    DE: Deutschland — Bundesagentur für Arbeit Jobsuche-API (kostenlos, offen).
+    UZ: Germaniya — Bundesagentur für Arbeit Jobsuche API (bepul, rasmiy).
+    RU: Германия — API Bundesagentur für Arbeit (бесплатный, официальный).
+    EN: Germany — Bundesagentur für Arbeit Jobsuche API (free, official).
+    DE: Deutschland — Bundesagentur für Arbeit Jobsuche-API (kostenlos, offiziell).
     """
     MAX_PAGES = 1
     PAGE_SIZE = 100
@@ -130,7 +183,7 @@ def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
     else:
         search_text = query.strip() or ALL_SECTORS_DE_KEYWORDS
 
-    headers = {"X-API-Key": "jobboerse-jobsuche"}
+    headers = {**_bundesagentur_headers(), "accept": "application/json"}
     all_items = []
 
     for page in range(1, MAX_PAGES + 1):
@@ -439,31 +492,98 @@ def fetch_adzuna_jobs(query="", sector="all", country="DE"):
 
 
 # ===========================================================================
-# 6) EURES (butun YeI) — RASMIY, lekin ro'yxatdan o'tish/kalit kerak
+# 6) EURES (butun YeI) — RASMIY va OCHIQ (kalit KERAK EMAS)
 # ===========================================================================
-def fetch_eures_jobs(query="", sector="all", country="ALL"):
+def fetch_eures_jobs(query="", sector="all", country="DE"):
     """
-    UZ: EURES — Yevropa Ittifoqining rasmiy ish portali. Uning API'si bor,
-        lekin ro'yxatdan o'tish va kalit (EURES_API_KEY) talab qiladi.
-        HOZIRCHA bu zagotovka (stub): kalit qo'shilgach to'ldiriladi.
-    RU: EURES — официальный портал вакансий ЕС. API существует, но требует
-        регистрации и ключа (EURES_API_KEY). Пока это заготовка (stub):
-        будет заполнена после добавления ключа.
-    EN: EURES — the EU's official job portal. It has an API but requires
-        registration and a key (EURES_API_KEY). For now this is a stub:
-        to be completed once a key is added.
-    DE: EURES — das offizielle Jobportal der EU. Es gibt eine API, die aber
-        Registrierung und einen Schlüssel (EURES_API_KEY) erfordert. Vorerst
-        ein Stub: wird nach dem Hinzufügen eines Schlüssels vervollständigt.
+    UZ: EURES — Yevropa Ittifoqining rasmiy ish portali. Ochiq ("public")
+        API'dan foydalanamiz — kalit kerak emas. Mamlakatni locationCodes
+        orqali beramiz. https://europa.eu/eures/api/.../jv-search/search
+    RU: EURES — официальный портал вакансий ЕС. Используем открытый ("public")
+        API — ключ не нужен. Страну передаём через locationCodes.
+    EN: EURES — the EU's official job portal. We use the open ("public") API —
+        no key needed. The country is passed via locationCodes.
+    DE: EURES — das offizielle Jobportal der EU. Wir nutzen die offene
+        ("public") API — kein Schlüssel nötig. Land über locationCodes.
     """
-    api_key = _get_key("EURES_API_KEY")
-    if not api_key:
-        return []
-    # UZ: Kalit bo'lsa — bu yerga haqiqiy so'rov kodi yoziladi.
-    # RU: При наличии ключа — здесь будет реальный запрос.
-    # EN: With a key — the real request goes here.
-    # DE: Mit Schlüssel — hier kommt die echte Anfrage.
-    return []
+    loc = (country or "DE").lower()
+    # UZ: qidiruv so'zi + sektor kalit so'zi (inglizcha).
+    # RU: поисковый запрос + ключевое слово сектора (англ.).
+    # EN: search text + sector keyword (English).
+    # DE: Suchtext + Sektor-Stichwort (Englisch).
+    text = f"{query} {SECTOR_TO_EN_KEYWORD.get(sector, '')}".strip()
+    body = {
+        "resultsPerPage": 50,
+        "page": 1,
+        "sortSearch": "MOST_RECENT",
+        "keywords": ([{"keyword": text, "specificSearchCode": "EVERYWHERE"}] if text else []),
+        "locationCodes": [loc],
+        "euresFlagCodes": [],
+        "requestLanguage": "en",
+        "sessionId": "gatework",
+    }
+
+    jobs = []
+    try:
+        res = requests.post(
+            "https://europa.eu/eures/api/jv-searchengine/public/jv-search/search",
+            json=body,
+            headers={"Content-Type": "application/json", "accept": "application/json"},
+            timeout=9,
+        )
+        res.raise_for_status()
+        data = res.json()
+        # UZ: javob tuzilishi har xil bo'lishi mumkin — bir nechta nom sinaymiz.
+        # RU: структура ответа может отличаться — пробуем несколько имён полей.
+        # EN: the response shape can vary — try several field names.
+        # DE: die Antwortstruktur kann variieren — mehrere Feldnamen probieren.
+        items = data.get("jvs") or data.get("records") or data.get("results") or []
+        for it in items:
+            try:
+                title = it.get("title") or it.get("jobTitle") or "—"
+                employer = (
+                    it.get("employerName")
+                    or (it.get("employer") or {}).get("name")
+                    or it.get("company")
+                )
+                # UZ: joylashuv — locationMap (mamlakat->shaharlar) yoki location.
+                # RU: локация — locationMap (страна->города) или location.
+                # EN: location — locationMap (country->cities) or location.
+                # DE: Standort — locationMap (Land->Städte) oder location.
+                city = ""
+                lm = it.get("locationMap") or it.get("locations")
+                if isinstance(lm, dict):
+                    vals = []
+                    for v in lm.values():
+                        if isinstance(v, list):
+                            vals += [str(x) for x in v]
+                        elif v:
+                            vals.append(str(v))
+                    city = ", ".join(vals[:2])
+                elif isinstance(lm, list) and lm:
+                    city = str(lm[0])
+                jid = it.get("id") or it.get("jvId") or ""
+                apply_url = (
+                    it.get("jvUrl")
+                    or it.get("url")
+                    or (f"https://europa.eu/eures/portal/jv-se/jv-details/{jid}?lang=en" if jid else "https://europa.eu/eures/portal/jv-se/home")
+                )
+                jobs.append(_job(
+                    id_=f"eures-{loc}-{jid}",
+                    country=(country or "DE").upper(),
+                    city=city,
+                    employer=employer,
+                    title=title,
+                    apply_url=apply_url,
+                    sector=sector,
+                    source_name="EURES",
+                    posted=(it.get("modificationDate") or it.get("creationDate") or "")[:10],
+                ))
+            except Exception as e:
+                print(f"[EURES bitta e'lon xatosi] {e}")
+    except Exception as e:
+        print(f"[EURES xatosi] {e}")
+    return jobs
 
 
 # ===========================================================================
@@ -576,7 +696,7 @@ SOURCES = [
     # DE: Die folgenden sind noch nicht fertig (Stub) oder brauchen einen
     #     Schlüssel, daher "stub": True und im Filter AUSGEBLENDET. Code ist
     #     bereit — "stub" entfernen, sobald Schlüssel/Implementierung da ist.
-    {"key": "eures", "name": "EURES", "countries": ["DE", "GB", "PL", "NL", "SE"], "fn": fetch_eures_jobs, "enabled": True, "needs_key": "EURES_API_KEY", "stub": True},
+    {"key": "eures", "name": "EURES", "countries": ["DE", "PL", "NL", "SE"], "fn": fetch_eures_jobs, "enabled": True},
     {"key": "findajob", "name": "Find a Job (gov.uk)", "countries": ["GB"], "fn": fetch_findajob_jobs, "enabled": True, "needs_key": "FINDAJOB_API_KEY", "stub": True},
     {"key": "praca", "name": "Praca.gov.pl", "countries": ["PL"], "fn": fetch_praca_jobs, "enabled": True, "stub": True},
     {"key": "werkenbijdeoverheid", "name": "WerkenbijdeOverheid", "countries": ["NL"], "fn": fetch_werkenbijdeoverheid_jobs, "enabled": True, "stub": True},
