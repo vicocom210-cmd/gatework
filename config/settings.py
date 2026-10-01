@@ -90,3 +90,22 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "users.User"
+
+# ============================================================================
+# UZ: MAXFIY sozlamalar (API kalitlari) — agar config/local_settings.py mavjud
+#     bo'lsa, shu yerda o'qiladi. Bu fayl GitHub'ga chiqmaydi (.gitignore).
+#     Yangi kompyuterда: local_settings.example.py dan nusxa olib, kalit yozing.
+# RU: СЕКРЕТНЫЕ настройки (ключи API) — читаются из config/local_settings.py,
+#     если он есть. Файл не попадает на GitHub (.gitignore). На новом ПК:
+#     скопируйте local_settings.example.py и впишите ключи.
+# EN: SECRET settings (API keys) — read from config/local_settings.py if it
+#     exists. That file is not pushed to GitHub (.gitignore). On a new machine:
+#     copy local_settings.example.py and fill in the keys.
+# DE: GEHEIME Einstellungen (API-Schlüssel) — werden aus config/local_settings.py
+#     gelesen, falls vorhanden. Nicht auf GitHub (.gitignore). Auf neuem PC:
+#     local_settings.example.py kopieren und Schlüssel eintragen.
+# ============================================================================
+try:
+    from .local_settings import *  # noqa: F401,F403
+except ImportError:
+    pass

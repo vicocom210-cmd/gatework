@@ -15,6 +15,12 @@ env/
 # DE: von Benutzern hochgeladene Dateien
 /media/
 
+# UZ: MAXFIY sozlamalar (API kalitlari) — GitHub'ga HECH QACHON chiqmasin!
+# RU: СЕКРЕТНЫЕ настройки (ключи API) — НИКОГДА не в GitHub!
+# EN: SECRET settings (API keys) — NEVER commit to GitHub!
+# DE: GEHEIME Einstellungen (API-Schlüssel) — NIEMALS zu GitHub!
+config/local_settings.py
+
 # IDE
 .idea/
 .vscode/
