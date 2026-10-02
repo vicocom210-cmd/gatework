@@ -122,59 +122,6 @@ def _job(id_, country, city, employer, title, apply_url, sector, source_name, po
 # ===========================================================================
 # 1) BUNDESAGENTUR FÜR ARBEIT (DE) — ochiq, bepul, RASMIY
 # ===========================================================================
-# UZ: MUHIM — bu API endi yangi kalitni talab qiladi. Eski "jobboerse-jobsuche"
-#     kaliti 403 ("No match found") beradi. Hozirgi to'g'ri usul: ommaviy
-#     client_id ni "X-API-Key" sarlavhasida yuborish (OAuth token ham mumkin).
-# RU: ВАЖНО — API теперь требует новый ключ. Старый "jobboerse-jobsuche" даёт 403.
-#     Текущий способ: публичный client_id в заголовке "X-API-Key".
-# EN: IMPORTANT — this API now needs a new key. The old "jobboerse-jobsuche"
-#     returns 403 ("No match found"). The current way: send the public client_id
-#     in the "X-API-Key" header (an OAuth token also works).
-# DE: WICHTIG — die API braucht jetzt einen neuen Schlüssel. Das alte
-#     "jobboerse-jobsuche" liefert 403. Aktuell: öffentliche client_id im
-#     "X-API-Key"-Header senden.
-BA_CLIENT_ID = "c003a37f-024f-462a-b36d-b001be4cd24a"
-BA_CLIENT_SECRET = "32a39620-32b3-4307-9aa1-511e3d7f48a8"
-_ba_token = {"value": None, "exp": 0}
-
-
-def _bundesagentur_headers():
-    """
-    UZ: Avval OAuth token olishga urinamiz (cache bilan), bo'lmasa client_id ni
-        X-API-Key sifatida ishlatamiz — ikkalasi ham rasmiy qabul qilinadi.
-    RU: Сначала пробуем OAuth-токен (с кэшем), иначе client_id как X-API-Key.
-    EN: Try an OAuth token first (cached); otherwise use the client_id as
-        X-API-Key — both are accepted officially.
-    DE: Zuerst OAuth-Token (gecacht), sonst client_id als X-API-Key.
-    """
-    import time as _t
-    now = _t.time()
-    if _ba_token["value"] and now < _ba_token["exp"]:
-        return {"OAuthAccessToken": _ba_token["value"]}
-    try:
-        res = requests.post(
-            "https://rest.arbeitsagentur.de/oauth/gettoken_cc",
-            data={
-                "client_id": BA_CLIENT_ID,
-                "client_secret": BA_CLIENT_SECRET,
-                "grant_type": "client_credentials",
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-            timeout=7,
-        )
-        res.raise_for_status()
-        tok = res.json()
-        _ba_token["value"] = tok.get("access_token")
-        # UZ: muddatidan 60s oldin yangilaymiz / EN: refresh 60s before expiry
-        _ba_token["exp"] = now + int(tok.get("expires_in", 3600)) - 60
-        if _ba_token["value"]:
-            return {"OAuthAccessToken": _ba_token["value"]}
-    except Exception as e:
-        print(f"[Bundesagentur OAuth xatosi — X-API-Key ga qaytamiz] {e}")
-    # UZ: zaxira usul / EN: fallback
-    return {"X-API-Key": BA_CLIENT_ID}
-
-
 def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
     """
     UZ: Germaniya — Bundesagentur für Arbeit Jobsuche API (bepul, rasmiy).
@@ -190,7 +137,14 @@ def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
     else:
         search_text = query.strip() or ALL_SECTORS_DE_KEYWORDS
 
-    headers = {**_bundesagentur_headers(), "accept": "application/json"}
+    # UZ: ESKI (ishlagan) usul — oddiy X-API-Key. OAuth qo'shish timeout
+    #     qo'shib, budjetni yeb qo'yardi, shuning uchun qaytib shuni ishlatamiz.
+    # RU: СТАРЫЙ (рабочий) способ — простой X-API-Key. OAuth добавлял таймаут,
+    #     поэтому возвращаемся к нему.
+    # EN: The OLD (working) way — a plain X-API-Key. OAuth added a timeout that
+    #     ate the budget, so we go back to this.
+    # DE: Der ALTE (funktionierende) Weg — ein einfacher X-API-Key.
+    headers = {"X-API-Key": "jobboerse-jobsuche", "accept": "application/json"}
     all_items = []
 
     for page in range(1, MAX_PAGES + 1):
