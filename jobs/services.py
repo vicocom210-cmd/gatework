@@ -659,7 +659,21 @@ SOURCES = [
     #     from a server (different IP).
     # DE: Bundesagentur im Filter sichtbar. HINWEIS: ihre API kann in manchen Netzen
     #     403/Timeout liefern (Geoblock); dann erscheint die "keine Antwort"-Meldung.
-    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True},
+    # UZ: Bundesagentur YASHIRIN (stub) — rest.arbeitsagentur.de bu tarmoqdan
+    #     ULANMAYDI (v4 -> 403, v6/OAuth -> timeout). Bu geo/tarmoq cheklovi,
+    #     kod to'g'ri. Serverga (Yevropa IP) joylaganda "stub"ni olib tashlang —
+    #     o'zi ishlaydi. Germaniyani Adzuna + Arbeitnow + EURES qamraydi.
+    # RU: Bundesagentur СКРЫТ (stub) — rest.arbeitsagentur.de НЕ доступен из этой
+    #     сети (v4 -> 403, v6/OAuth -> timeout). Это гео/сетевое ограничение, код
+    #     верный. На сервере (IP ЕС) уберите "stub". Германию дают Adzuna+Arbeitnow+EURES.
+    # EN: Bundesagentur is HIDDEN (stub) — rest.arbeitsagentur.de is UNREACHABLE
+    #     from this network (v4 -> 403, v6/OAuth -> timeout). A geo/network limit,
+    #     not a code bug. On a server (EU IP) drop the "stub" and it works. Germany
+    #     is covered by Adzuna + Arbeitnow + EURES.
+    # DE: Bundesagentur AUSGEBLENDET (stub) — rest.arbeitsagentur.de aus diesem Netz
+    #     NICHT erreichbar (v4 -> 403, v6/OAuth -> Timeout). Geo-/Netzlimit, kein
+    #     Code-Fehler. Auf einem Server (EU-IP) "stub" entfernen.
+    {"key": "bundesagentur", "name": "Bundesagentur für Arbeit", "countries": ["DE"], "fn": fetch_bundesagentur_jobs, "enabled": True, "stub": True},
     {"key": "arbetsformedlingen", "name": "Arbetsförmedlingen", "countries": ["SE"], "fn": fetch_arbetsformedlingen_jobs, "enabled": True},
     # UZ: JobStream "og'ir" (katta snapshot) — faqat o'zi tanlanganда ishlaydi,
     #     "barcha manbalar"да chaqirilmaydi (aks holda sahifa sekinlashadi).
