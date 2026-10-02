@@ -26,3 +26,27 @@ ADZUNA_APP_KEY = ""
 # UZ: Ixtiyoriy / RU: необязательно / EN: optional / DE: optional
 EURES_API_KEY = ""
 FINDAJOB_API_KEY = ""
+
+# ============================================================================
+# EMAIL (Gmail) — ro'yxatdan o'tish kodini yuborish uchun
+# UZ: Gmail "app password" oling (2 bosqichli himoya yoqilган bo'lishi kerak):
+#     https://myaccount.google.com/apppasswords  — 16 belgili parol beradi.
+#     EMAIL_HOST_USER = to'liq gmail manzilingiz, EMAIL_HOST_PASSWORD = app password.
+#     Bo'sh qoldirsangiz — kod haqiqiy email o'rniga terminalda chiqadi (test).
+# RU: Создайте Gmail "app password" (нужна 2FA): myaccount.google.com/apppasswords
+# EN: Create a Gmail "app password" (2FA required): myaccount.google.com/apppasswords
+# DE: Gmail "App-Passwort" erstellen (2FA nötig): myaccount.google.com/apppasswords
+# ============================================================================
+EMAIL_HOST_USER = ""        # masalan / e.g. "gatework.uz@gmail.com"
+EMAIL_HOST_PASSWORD = ""    # Gmail app password (16 belgi, probelsiz)
+
+# ============================================================================
+# SMS (Eskiz.uz) — telefonga kod yuborish uchun (O'zbekiston)
+# UZ: eskiz.uz da ro'yxatdan o'tib, email va parolingizni yozing. Bo'sh bo'lsa —
+#     SMS kodi terminalda chiqadi (test rejimi).
+# RU: зарегистрируйтесь на eskiz.uz. Пусто — код в терминал (тест).
+# EN: register at eskiz.uz. Empty — the SMS code prints to the terminal (test).
+# DE: bei eskiz.uz registrieren. Leer — SMS-Code im Terminal (Test).
+# ============================================================================
+ESKIZ_EMAIL = ""
+ESKIZ_PASSWORD = ""

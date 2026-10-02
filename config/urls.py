@@ -6,6 +6,7 @@ from users.views import (
     RegisterView, LoginView, LogoutView, MeView,
     AdminUsersListView, AdminUserDetailView, AdminStatsView,
     ProfileView, RatingView, ActivityView,
+    RegisterStartView, RegisterVerifyView, RegisterResendView,
 )
 from jobs.views import JobsListView, TrackView, ArchiveView, ArchiveClearView, SourcesView
 from pages.api import RatesView, PlansView
@@ -52,6 +53,13 @@ urlpatterns = [
     # xuddi o'sha view'larni shu manzillarda ham ochib qo'yamiz —
     # Django'da bitta view'ni bir nechta URL'ga ulash mumkin.
     path("api/register", RegisterView.as_view()),
+    # UZ: Email + SMS tasdiqlashli ro'yxatdan o'tish (2 bosqich).
+    # RU: Регистрация с подтверждением email + SMS (2 шага).
+    # EN: Registration with email + SMS verification (2 steps).
+    # DE: Registrierung mit E-Mail- + SMS-Bestätigung (2 Schritte).
+    path("api/register/start", RegisterStartView.as_view()),
+    path("api/register/verify", RegisterVerifyView.as_view()),
+    path("api/register/resend", RegisterResendView.as_view()),
     path("api/login", LoginView.as_view()),
     path("api/logout", LogoutView.as_view()),
     path("api/me", MeView.as_view()),

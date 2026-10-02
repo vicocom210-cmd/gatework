@@ -92,6 +92,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = "users.User"
 
 # ============================================================================
+# UZ: EMAIL — tasdiqlash kodini yuborish uchun. Standart: console (kod TERMINALda
+#     chiqadi). local_settings.py da EMAIL_HOST_USER va EMAIL_HOST_PASSWORD
+#     (Gmail app password) berilса — pastда haqiqiy Gmail SMTP yoqiladi.
+# RU: EMAIL — для отправки кода. По умолчанию console (код в ТЕРМИНАЛЕ). Если в
+#     local_settings заданы EMAIL_HOST_USER/PASSWORD — включается реальный SMTP.
+# EN: EMAIL — to send the code. Default: console (code in the TERMINAL). If
+#     EMAIL_HOST_USER/PASSWORD are set in local_settings, real Gmail SMTP turns on.
+# DE: EMAIL — zum Senden des Codes. Standard: console (Code im TERMINAL). Mit
+#     EMAIL_HOST_USER/PASSWORD in local_settings wird echtes Gmail-SMTP aktiviert.
+# ============================================================================
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = ""
+EMAIL_HOST_PASSWORD = ""
+DEFAULT_FROM_EMAIL = "Gate Work <gatework.uz@gmail.com>"
+
+# ============================================================================
 # UZ: MAXFIY sozlamalar (API kalitlari) — agar config/local_settings.py mavjud
 #     bo'lsa, shu yerda o'qiladi. Bu fayl GitHub'ga chiqmaydi (.gitignore).
 #     Yangi kompyuterда: local_settings.example.py dan nusxa olib, kalit yozing.
@@ -109,3 +128,10 @@ try:
     from .local_settings import *  # noqa: F401,F403
 except ImportError:
     pass
+
+# UZ: Gmail ma'lumotlari berilган bo'lsa — haqiqiy SMTP'ni yoqamiz.
+# RU: Если заданы данные Gmail — включаем реальный SMTP.
+# EN: If Gmail credentials are provided, switch on real SMTP.
+# DE: Wenn Gmail-Daten vorhanden sind, echtes SMTP aktivieren.
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
