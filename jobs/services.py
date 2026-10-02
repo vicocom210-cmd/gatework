@@ -162,7 +162,7 @@ def fetch_bundesagentur_jobs(query="", sector="all", country="DE"):
             "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs",
         ):
             try:
-                res = requests.get(version_url, headers=headers, params=params, timeout=7)
+                res = requests.get(version_url, headers=headers, params=params, timeout=12)
                 res.raise_for_status()
                 data = res.json()
                 break
@@ -501,7 +501,7 @@ def fetch_eures_jobs(query="", sector="all", country="DE"):
             "https://europa.eu/eures/api/jv-searchengine/public/jv-search/search",
             json=body,
             headers={"Content-Type": "application/json", "accept": "application/json"},
-            timeout=9,
+            timeout=12,
         )
         res.raise_for_status()
         data = res.json()
@@ -854,7 +854,7 @@ def get_jobs(query="", sector="all", country="ALL", source="all"):
     pool = ThreadPoolExecutor(max_workers=len(tasks))
     future_to_task = {pool.submit(_run, task): task for task in tasks}
     try:
-        for fut in as_completed(future_to_task, timeout=11):
+        for fut in as_completed(future_to_task, timeout=14):
             s, c = future_to_task[fut]
             try:
                 jobs += fut.result() or []
