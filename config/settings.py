@@ -2,9 +2,29 @@
 Django settings for config project.
 """
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_env(path):
+    """
+    .env faylidagi KALIT=qiymat qatorlarini os.environ'ga yuklaydi.
+    Maxfiy ma'lumotlar (Gmail paroli) kodda emas, shu faylda turadi —
+    .env esa .gitignore'da, ya'ni GitHub'ga yuklanmaydi.
+    """
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env(BASE_DIR / ".env")
 
 SECRET_KEY = 'django-insecure-j^4m&&rd&p&s5!%bsaad=$3o9-_(d6nvgy67#v+is23xd1+q0r'
 
@@ -86,5 +106,20 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email (ro'yxatdan o'tishda tasdiqlash kodi uchun) — Gmail SMTP.
+# .env'da EMAIL_HOST_PASSWORD (Gmail "App Password") bo'lmasa, xatlar
+# yuborilmaydi, balki server konsoliga chiqariladi — sinash uchun.
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "").replace(" ", "")
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = "smtp.gmail.com"
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 15
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = f"Gate Work <{EMAIL_HOST_USER or 'noreply@gatework.local'}>"
 
 AUTH_USER_MODEL = "users.User"

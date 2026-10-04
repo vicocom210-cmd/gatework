@@ -3,8 +3,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.authentication import SessionAuthentication
+import logging
+
 from .models import User
 from .serializers import RegisterSerializer
+from .verification import check_code, resend_wait_seconds, send_code
+
+logger = logging.getLogger(__name__)
 
 
 class CSRFExemptSessionAuthentication(SessionAuthentication):
@@ -39,14 +44,81 @@ class RegisterView(APIView):
     Django'dagi ekvivalenti.
     """
     def post(self, request):
+        # Avval shu email bilan ro'yxatdan o'tib, lekin kodni TASDIQLAMAY
+        # qolgan eski urinish bo'lsa — uni o'chiramiz, aks holda odam
+        # qayta ro'yxatdan o'ta olmay qolardi.
+        email = (request.data.get("email") or "").strip()
+        if email:
+            _unverified(email).delete()
+
         serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(
-                {"ok": True, "user": {"id": user.id, "name": user.first_name, "email": user.email, "isAdmin": user.is_staff}},
-                status=status.HTTP_201_CREATED,
-            )
-        return Response({"ok": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        if not serializer.is_valid():
+            first = next(iter(serializer.errors.values()))[0]
+            return Response({"ok": False, "error": str(first), "errors": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        try:
+            send_code(user)
+        except Exception:
+            logger.exception("Tasdiqlash kodini yuborib bo'lmadi: %s", user.email)
+            user.delete()
+            return Response({"ok": False, "error": "Tasdiqlash kodini yuborib bo'lmadi. Keyinroq urinib ko'ring."},
+                            status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"ok": True, "needVerify": True, "email": user.email}, status=status.HTTP_201_CREATED)
+
+
+def _unverified(email):
+    """Ro'yxatdan o'tgan, lekin emailini hali tasdiqlamagan foydalanuvchilar."""
+    return User.objects.filter(username=email, is_active=False, email_verification__isnull=False)
+
+
+def _auth_user(user):
+    return {"id": user.id, "name": user.first_name, "email": user.email, "isAdmin": user.is_staff}
+
+
+class VerifyEmailView(APIView):
+    """Foydalanuvchi emailiga kelgan 6 xonali kodni tekshiradi va hisobni faollashtiradi."""
+    authentication_classes = []
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip()
+        code = (request.data.get("code") or "").strip()
+        user = _unverified(email).first()
+        if user is None:
+            return Response({"ok": False, "error": "Tasdiqlanmagan hisob topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        ok, error = check_code(user, code)
+        if not ok:
+            return Response({"ok": False, "error": error}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+        login(request, user)
+        return Response({"ok": True, "user": _auth_user(user)})
+
+
+class ResendCodeView(APIView):
+    """Tasdiqlash kodini qayta yuboradi (60 soniyada bir martadan ko'p emas)."""
+    authentication_classes = []
+
+    def post(self, request):
+        email = (request.data.get("email") or "").strip()
+        user = _unverified(email).first()
+        if user is None:
+            return Response({"ok": False, "error": "Tasdiqlanmagan hisob topilmadi."}, status=status.HTTP_404_NOT_FOUND)
+
+        wait = resend_wait_seconds(user)
+        if wait:
+            return Response({"ok": False, "error": f"Yangi kodni {wait} soniyadan keyin so'rashingiz mumkin.",
+                             "wait": wait}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        try:
+            send_code(user)
+        except Exception:
+            logger.exception("Tasdiqlash kodini qayta yuborib bo'lmadi: %s", user.email)
+            return Response({"ok": False, "error": "Kodni yuborib bo'lmadi. Keyinroq urinib ko'ring."},
+                            status=status.HTTP_502_BAD_GATEWAY)
+        return Response({"ok": True})
 
 
 class LoginView(APIView):
@@ -65,6 +137,19 @@ class LoginView(APIView):
 
         user = authenticate(request, username=email, password=password)
         if user is None:
+            # authenticate() faol bo'lmagan (emailini tasdiqlamagan)
+            # foydalanuvchini ham None qaytaradi. Parol to'g'ri bo'lsa,
+            # unga "avval emailni tasdiqlang" deymiz va kod oynasini ochamiz.
+            pending = _unverified(email).first()
+            if pending and pending.check_password(password):
+                if not resend_wait_seconds(pending):
+                    try:
+                        send_code(pending)
+                    except Exception:
+                        logger.exception("Tasdiqlash kodini yuborib bo'lmadi: %s", pending.email)
+                return Response({"ok": False, "needVerify": True, "email": pending.email,
+                                 "error": "Email hali tasdiqlanmagan. Pochtangizga yuborilgan kodni kiriting."},
+                                status=status.HTTP_403_FORBIDDEN)
             return Response({"ok": False, "error": "Email yoki parol noto'g'ri"}, status=status.HTTP_401_UNAUTHORIZED)
 
         # login() — Flask'dagi session["user_id"] = user.id bilan bir xil

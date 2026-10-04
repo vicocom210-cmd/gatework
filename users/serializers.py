@@ -23,6 +23,16 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["firstName", "lastName", "birthDate", "email", "password"]
+        # AbstractUser'da email ixtiyoriy — ro'yxatdan o'tishda esa majburiy.
+        extra_kwargs = {"email": {"required": True, "allow_blank": False}}
+
+    def validate_email(self, value):
+        # email = username, username esa yagona bo'lishi shart. Buni oldindan
+        # tekshirmasak, baza IntegrityError (500) qaytarardi.
+        value = value.strip()
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Bu email bilan hisob allaqachon mavjud.")
+        return value
 
     def create(self, validated_data):
         birth_date = validated_data.get("birthDate") or None
@@ -32,6 +42,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             first_name=validated_data.get("firstName", ""),
             last_name=validated_data.get("lastName", ""),
             birth_date=birth_date,
+            # Email kod orqali tasdiqlanmaguncha hisob faol emas —
+            # bunday foydalanuvchi tizimga kira olmaydi.
+            is_active=False,
         )
         # MUHIM: parolni HECH QACHON to'g'ridan-to'g'ri saqlamang!
         # set_password() uni avtomatik xavfsiz hash qiladi (Flask'da

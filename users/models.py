@@ -39,3 +39,19 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email or self.username
+
+
+class EmailVerification(models.Model):
+    """
+    Ro'yxatdan o'tgan, lekin emailini hali TASDIQLAMAGAN foydalanuvchi
+    uchun yuborilgan 6 xonali kod. Kodning o'zini emas, faqat uning
+    HASH'ini saqlaymiz — baza o'g'irlansa ham kodlar ochilib qolmaydi.
+    Email tasdiqlangach, bu yozuv o'chiriladi.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="email_verification")
+    code_hash = models.CharField(max_length=128)
+    sent_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.user.email} (tasdiqlanmagan)"

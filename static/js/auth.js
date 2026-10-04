@@ -13,13 +13,26 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
   const pendingRedirect = params.get("redirect") ? decodeURIComponent(params.get("redirect")) : "/";
 
   function show(name) {
-    tabs.classList.toggle("is-signup", name === "signup");
+    const tab = name === "verify" ? "signup" : name; // tasdiqlash — ro'yxatdan o'tishning davomi
+    tabs.classList.toggle("is-signup", tab === "signup");
     tabs.querySelectorAll("[data-auth-tab]").forEach((b) => {
-      b.classList.toggle("active", b.dataset.authTab === name);
+      b.classList.toggle("active", b.dataset.authTab === tab);
     });
     panes.forEach((p) => p.classList.toggle("active", p.dataset.authPane === name));
     if (msg) msg.classList.remove("show", "err");
-    history.replaceState(null, "", name === "signup" ? "#signup" : "#login");
+    if (name !== "verify") history.replaceState(null, "", name === "signup" ? "#signup" : "#login");
+  }
+
+  /* ---------- email tasdiqlash oynasi ---------- */
+  const verifyForm = document.querySelector('[data-auth-pane="verify"]');
+  let verifyEmail = "";
+
+  function openVerify(email) {
+    verifyEmail = email;
+    verifyForm.querySelector("[data-verify-email]").textContent = email;
+    verifyForm.querySelector('input[name="code"]').value = "";
+    show("verify");
+    verifyForm.querySelector('input[name="code"]').focus();
   }
 
   tabs.querySelectorAll("[data-auth-tab]").forEach((b) => {
@@ -89,6 +102,26 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
         return;
       }
 
+      if (form === verifyForm) {
+        btn.classList.add("loading");
+        try {
+          const res = await fetch("/api/verify-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: verifyEmail, code: form.querySelector('input[name="code"]').value.trim() }),
+          });
+          const data = await res.json();
+          btn.classList.remove("loading");
+          if (data.ok) window.location.href = pendingRedirect;
+          else showMsg(data.error || t("authFillAll"), true);
+        } catch (err) {
+          btn.classList.remove("loading");
+          console.error(err);
+          showMsg("Serverga ulanishda xatolik yuz berdi.", true);
+        }
+        return;
+      }
+
       const isSignup = form.dataset.authPane === "signup";
       const email = form.querySelector('input[name="email"]').value.trim();
       const password = form.querySelector('input[name="password"]').value;
@@ -116,7 +149,11 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
         data = await res.json();
         btn.classList.remove("loading");
 
-        if (data.ok) {
+        if (data.needVerify) {
+          // ro'yxatdan o'tildi (yoki email hali tasdiqlanmagan) — kod oynasiga o'tamiz
+          openVerify(data.email);
+          if (data.error) showMsg(data.error, true);
+        } else if (data.ok) {
           window.location.href = pendingRedirect;
         } else {
           showMsg(data.error || t("authFillAll"), true);
@@ -128,6 +165,28 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
       }
     });
   });
+
+  /* ---------- kodni qayta yuborish ---------- */
+  const resendBtn = document.querySelector("[data-verify-resend]");
+  if (resendBtn) {
+    resendBtn.addEventListener("click", async () => {
+      resendBtn.disabled = true;
+      try {
+        const res = await fetch("/api/resend-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: verifyEmail }),
+        });
+        const data = await res.json();
+        if (data.ok) showMsg(t("authVerifySent"), false);
+        else showMsg(data.error, true);
+      } catch (err) {
+        console.error(err);
+        showMsg("Serverga ulanishda xatolik yuz berdi.", true);
+      }
+      resendBtn.disabled = false;
+    });
+  }
 
   /* ---------- HAQIQIY Google Sign-In ---------- */
   // Har bir .btn-google tugmasi uchun ko'rinmas, haqiqiy Google

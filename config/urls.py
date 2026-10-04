@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 from users.views import (
-    RegisterView, LoginView, LogoutView, MeView,
+    RegisterView, VerifyEmailView, ResendCodeView, LoginView, LogoutView, MeView,
     AdminUsersListView, AdminUserDetailView, AdminStatsView,
 )
 from jobs.views import JobsListView, TrackView, ArchiveView, ArchiveClearView
@@ -34,6 +34,8 @@ urlpatterns = [
     # xuddi o'sha view'larni shu manzillarda ham ochib qo'yamiz —
     # Django'da bitta view'ni bir nechta URL'ga ulash mumkin.
     path("api/register", RegisterView.as_view()),
+    path("api/verify-email", VerifyEmailView.as_view()),
+    path("api/resend-code", ResendCodeView.as_view()),
     path("api/login", LoginView.as_view()),
     path("api/logout", LogoutView.as_view()),
     path("api/me", MeView.as_view()),
