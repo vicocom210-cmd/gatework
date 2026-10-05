@@ -9,9 +9,12 @@
   <link rel="icon" href="{% static 'images/logo-white.png' %}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=DM+Sans:wght@400;500;700&family=Instrument+Serif&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/menu.css' %}?v=2" />
   {% block head %}{% endblock %}
+  <!-- SINOV DIZAYNI: eski ko'rinishga qaytish uchun shu qatorni o'chiring -->
+  <link rel="stylesheet" href="{% static 'css/theme-test.css' %}?v=3" />
 </head>
 <body>
 
@@ -30,89 +33,119 @@
   <span class="intro-gate right"></span>
 </div>
 
-<div class="nav-outer">
-  <nav class="nav glass">
-    <!-- UZ: Mobil menyu tugmasi (hamburger) — faqat kichik ekranda ko'rinadi.
-         RU: Кнопка мобильного меню (гамбургер) — видна только на малом экране.
-         EN: Mobile menu button (hamburger) — shown only on small screens.
-         DE: Mobiler Menü-Button (Hamburger) — nur auf kleinen Bildschirmen. -->
-    <button class="nav-burger" type="button" data-nav-toggle aria-label="Menyu" aria-expanded="false">☰</button>
-    <a class="brand" href="{% url 'index' %}">
-      <span class="mark">
-        <img data-logo
-             data-white="{% static 'images/logo-white.png' %}"
-             data-black="{% static 'images/logo-black.png' %}"
-             src="{% static 'images/logo-white.png' %}"
-             alt="Gate Work logotipi" />
-      </span>
-      <span>Gate<i>Work</i></span>
-    </a>
+<!-- =====================================================================
+     UZ: YUQORI PANEL — nom o'rtada, chapda menyu tugmasi (uch chiziq),
+         o'ngda kirish/profil. Til, valyuta, mavzu, aloqa va sozlamalar
+         alohida yon menyuda.
+     EN: TOP BAR — name centred, menu button (three lines) on the left,
+         login/profile on the right. Language, currency, theme, contact and
+         settings live in a separate side menu.
+     ===================================================================== -->
+<header class="topbar" data-topbar>
+  <div class="topbar-side">
+    <button class="menu-btn" type="button" data-menu-open aria-controls="site-menu" aria-expanded="false">
+      <span class="menu-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="menu-label" data-t="menuLabel"></span>
+    </button>
+  </div>
 
-    <div class="nav-links">
-      <a href="{% url 'index' %}" class="{% if page == 'home' %}active{% endif %}" data-t="navHome"></a>
-      <a href="{% url 'about' %}" class="{% if page == 'about' %}active{% endif %}" data-t="navAbout"></a>
-      <a href="{% url 'rating' %}" class="{% if page == 'rating' %}active{% endif %}" data-t="navRating"></a>
+  <a class="topbar-brand" href="{% url 'index' %}" aria-label="Gate Work">
+    <span class="mark">
+      <img data-logo
+           data-white="{% static 'images/logo-white.png' %}"
+           data-black="{% static 'images/logo-black.png' %}"
+           src="{% static 'images/logo-white.png' %}"
+           alt="" />
+    </span>
+    <span class="name">Gate<i>Work</i></span>
+  </a>
+
+  <div class="topbar-side right">
+    <div class="nav-auth" data-nav-auth></div>
+  </div>
+</header>
+
+<!-- YON MENYU (uch chiziq bosilganda ochiladi) -->
+<div class="site-menu" id="site-menu" data-menu hidden>
+  <div class="site-menu-backdrop" data-menu-close></div>
+  <aside class="site-menu-panel" role="dialog" aria-modal="true" aria-labelledby="site-menu-title">
+    <div class="sm-head">
+      <span class="sm-title" id="site-menu-title" data-t="menuLabel"></span>
+      <button class="sm-close" type="button" data-menu-close aria-label="Yopish">✕</button>
     </div>
 
-    <div class="nav-right">
-      <button class="icon-btn" data-theme-toggle aria-label="Kun / tun rejimi"><span data-theme-icon>☀</span></button>
-      <div class="lang-switch">
-        <button data-lang-btn="uz">uz</button>
-        <button data-lang-btn="ru">ru</button>
-        <button data-lang-btn="en">en</button>
-        <button data-lang-btn="de">de</button>
-      </div>
-      <div class="lang-switch" data-currency-switch>
-        <button data-cur-btn="native" class="active">SEK/€</button>
-        <button data-cur-btn="USD">$</button>
-        <button data-cur-btn="EUR">€</button>
-      </div>
-      <!-- ADMIN BILAN BOG'LANISH -->
-      <div class="contact-menu" data-contact-menu>
-        <button class="contact-btn" type="button" aria-haspopup="true" aria-expanded="false">
-          <span class="dot"></span>
-          <span class="txt" data-t="contactBtn"></span>
-          <span class="ico">💬</span>
+    <nav class="sm-links">
+      <a href="{% url 'index' %}" class="{% if page == 'home' %}active{% endif %}"><small>01</small><span data-t="navHome"></span></a>
+      <a href="{% url 'about' %}" class="{% if page == 'about' %}active{% endif %}"><small>02</small><span data-t="navAbout"></span></a>
+      <a href="{% url 'rating' %}" class="{% if page == 'rating' %}active{% endif %}"><small>03</small><span data-t="navRating"></span></a>
+    </nav>
+
+    <div class="sm-auth" data-menu-auth></div>
+
+    <!-- SOZLAMALAR -->
+    <section class="sm-section">
+      <h4><span aria-hidden="true">⚙</span> <span data-t="settingsTitle"></span></h4>
+      <div class="sm-row">
+        <span data-t="settingsTheme"></span>
+        <button class="sm-pill" type="button" data-theme-toggle>
+          <span data-theme-icon>☀</span> <span data-theme-label></span>
         </button>
-        <div class="contact-pop glass">
-          <p class="contact-head" data-t="contactTitle"></p>
-          <!-- UZ: Telegram ADMIN (yozish) / RU: Telegram-АДМИН / EN: Telegram ADMIN / DE: Telegram-ADMIN -->
-          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_admin }}" target="_blank" rel="noopener noreferrer">
-            <span class="ci tg">✈</span>
-            <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram_admin }}</small></span>
-            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_admin }}" title="Copy">⧉</button>
-          </a>
-          <!-- UZ: Telegram KANAL / RU: Telegram-КАНАЛ / EN: Telegram CHANNEL / DE: Telegram-KANAL -->
-          <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_channel }}" target="_blank" rel="noopener noreferrer">
-            <span class="ci tg">📣</span>
-            <span class="ct"><b data-t="contactChannel"></b><small>@{{ CONTACT.telegram_channel }}</small></span>
-            <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_channel }}" title="Copy">⧉</button>
-          </a>
-          <!-- UZ: Instagram / RU: Instagram / EN: Instagram / DE: Instagram -->
-          <a class="contact-item" href="https://www.instagram.com/{{ CONTACT.instagram }}" target="_blank" rel="noopener noreferrer">
-            <span class="ci ig">◙</span>
-            <span class="ct"><b data-t="contactInsta"></b><small>@{{ CONTACT.instagram }}</small></span>
-            <button type="button" class="copy" data-copy="@{{ CONTACT.instagram }}" title="Copy">⧉</button>
-          </a>
-          <!-- UZ: Gmail — xat yozish oynasini ochadi (compose), oddiy google emas.
-               RU: Gmail — открывает окно написания письма (compose), не просто google.
-               EN: Gmail — opens the compose window, not just google.
-               DE: Gmail — öffnet das Verfassen-Fenster (compose), nicht nur google. -->
-          <a class="contact-item" href="{{ CONTACT.gmail_compose }}" target="_blank" rel="noopener noreferrer">
-            <span class="ci gm">✉</span>
-            <span class="ct"><b data-t="contactMail"></b><small>{{ CONTACT.email }}</small></span>
-            <button type="button" class="copy" data-copy="{{ CONTACT.email }}" title="Copy">⧉</button>
-          </a>
-          <button class="contact-item" type="button" data-open-chat>
-            <span class="ci ch">◎</span>
-            <span class="ct"><b data-t="contactChat"></b><small data-t="contactChatSub"></small></span>
-            <span class="unread" data-chat-unread hidden>0</span>
-          </button>
+      </div>
+      <div class="sm-row">
+        <span data-t="settingsLang"></span>
+        <div class="lang-switch">
+          <button data-lang-btn="uz">uz</button>
+          <button data-lang-btn="ru">ru</button>
+          <button data-lang-btn="en">en</button>
+          <button data-lang-btn="de">de</button>
         </div>
       </div>
-      <div class="nav-auth" data-nav-auth></div>
-    </div>
-  </nav>
+      <div class="sm-row">
+        <span data-t="settingsCurrency"></span>
+        <div class="lang-switch" data-currency-switch>
+          <button data-cur-btn="native" class="active">SEK/€</button>
+          <button data-cur-btn="USD">$</button>
+          <button data-cur-btn="EUR">€</button>
+        </div>
+      </div>
+      <div class="sm-row">
+        <span><span data-t="settingsMotion"></span><small data-t="settingsMotionHint"></small></span>
+        <button class="switch" type="button" data-motion-toggle role="switch" aria-checked="true">
+          <span class="track"><i></i></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ADMIN BILAN BOG'LANISH -->
+    <section class="sm-section" data-contact-list>
+      <h4><span class="dot" aria-hidden="true"></span> <span data-t="contactTitle"></span></h4>
+      <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_admin }}" target="_blank" rel="noopener noreferrer">
+        <span class="ci tg">✈</span>
+        <span class="ct"><b data-t="contactTg"></b><small>@{{ CONTACT.telegram_admin }}</small></span>
+        <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_admin }}" title="Copy">⧉</button>
+      </a>
+      <a class="contact-item" href="https://t.me/{{ CONTACT.telegram_channel }}" target="_blank" rel="noopener noreferrer">
+        <span class="ci tg">📣</span>
+        <span class="ct"><b data-t="contactChannel"></b><small>@{{ CONTACT.telegram_channel }}</small></span>
+        <button type="button" class="copy" data-copy="@{{ CONTACT.telegram_channel }}" title="Copy">⧉</button>
+      </a>
+      <a class="contact-item" href="https://www.instagram.com/{{ CONTACT.instagram }}" target="_blank" rel="noopener noreferrer">
+        <span class="ci ig">◙</span>
+        <span class="ct"><b data-t="contactInsta"></b><small>@{{ CONTACT.instagram }}</small></span>
+        <button type="button" class="copy" data-copy="@{{ CONTACT.instagram }}" title="Copy">⧉</button>
+      </a>
+      <a class="contact-item" href="{{ CONTACT.gmail_compose }}" target="_blank" rel="noopener noreferrer">
+        <span class="ci gm">✉</span>
+        <span class="ct"><b data-t="contactMail"></b><small>{{ CONTACT.email }}</small></span>
+        <button type="button" class="copy" data-copy="{{ CONTACT.email }}" title="Copy">⧉</button>
+      </a>
+      <button class="contact-item" type="button" data-open-chat>
+        <span class="ci ch">◎</span>
+        <span class="ct"><b data-t="contactChat"></b><small data-t="contactChatSub"></small></span>
+        <span class="unread" data-chat-unread hidden>0</span>
+      </button>
+    </section>
+  </aside>
 </div>
 
 <!-- JONLI CHAT (admin bilan) -->
@@ -154,8 +187,8 @@
   <div class="wrap bottom">© 2026 Gate Work</div>
 </footer>
 
-<script src="{% static 'js/data.js' %}"></script>
-<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/data.js' %}?v=5"></script>
+<script src="{% static 'js/app.js' %}?v=5"></script>
 <script src="{% static 'js/chat.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>

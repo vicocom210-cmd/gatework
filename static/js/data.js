@@ -3,6 +3,38 @@
 const LANGS = ["uz", "ru", "en", "de"];
 
 const STRINGS = {
+  /* ---- yon menyu va sozlamalar ---- */
+  menuLabel: { uz: "Menyu", ru: "Меню", en: "Menu", de: "Menü" },
+  settingsTitle: { uz: "Sozlamalar", ru: "Настройки", en: "Settings", de: "Einstellungen" },
+  settingsTheme: { uz: "Ko'rinish", ru: "Оформление", en: "Appearance", de: "Darstellung" },
+  settingsLang: { uz: "Til", ru: "Язык", en: "Language", de: "Sprache" },
+  settingsCurrency: { uz: "Valyuta", ru: "Валюта", en: "Currency", de: "Währung" },
+  settingsMotion: { uz: "Animatsiyalar", ru: "Анимации", en: "Animations", de: "Animationen" },
+  settingsMotionHint: {
+    uz: "Sekin qurilmalarda o'chirib qo'ying",
+    ru: "Отключите на медленных устройствах",
+    en: "Turn off on slower devices",
+    de: "Auf langsamen Geräten ausschalten",
+  },
+  themeLight: { uz: "Kunduzgi", ru: "Светлая", en: "Light", de: "Hell" },
+  themeDark: { uz: "Tungi", ru: "Тёмная", en: "Dark", de: "Dunkel" },
+
+  /* ---- "Biz haqimizda" kirish animatsiyasi ---- */
+  aboutLoading: { uz: "Yuklanmoqda", ru: "Загрузка", en: "Loading", de: "Wird geladen" },
+  aboutHeroItalic: { uz: "Xorijdagi ishga", ru: "Официальные двери", en: "The official", de: "Das offizielle" },
+  aboutHeroCaps: { uz: "Rasmiy darvoza", ru: "к работе за рубежом", en: "Gate to work abroad", de: "Tor zur Arbeit im Ausland" },
+  aboutScroll: { uz: "Pastga suring", ru: "Листайте вниз", en: "Scroll down", de: "Nach unten scrollen" },
+  aboutFactsTitle: { uz: "Raqamlarda Gate Work", ru: "Gate Work в цифрах", en: "Gate Work in numbers", de: "Gate Work in Zahlen" },
+  aboutFactLangs: { uz: "Til", ru: "Языка", en: "Languages", de: "Sprachen" },
+  aboutFactFee: { uz: "Komissiya %", ru: "Комиссия %", en: "Commission %", de: "Provision %" },
+  aboutFinalText: {
+    uz: "Rasmiy vakansiyalar — vositachisiz, tushunarli tilda, bitta joyda.",
+    ru: "Официальные вакансии — без посредников, на понятном языке, в одном месте.",
+    en: "Official vacancies — no middlemen, in plain language, all in one place.",
+    de: "Offizielle Stellen — ohne Vermittler, verständlich, an einem Ort.",
+  },
+  aboutCta: { uz: "Vakansiyalarni ko'rish", ru: "Смотреть вакансии", en: "Browse vacancies", de: "Stellen ansehen" },
+
   navHome: { uz: "Bosh sahifa", ru: "Главная", en: "Home", de: "Startseite" },
   navAbout: { uz: "Biz haqimizda", ru: "О нас", en: "About", de: "Über uns" },
   login: { uz: "Kirish", ru: "Войти", en: "Log in", de: "Anmelden" },
@@ -328,7 +360,7 @@ const SOURCES = [
 
 const STORY = [
   {
-    img: "https://images.pexels.com/photos/2166711/pexels-photo-2166711.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    img: "/static/images/about/person-1.webp",
     step: "01",
     title: { uz: "Hammasi bitta savoldan boshlandi", ru: "Всё началось с одного вопроса", en: "It started with one question", de: "Alles begann mit einer Frage" },
     text: {
@@ -339,7 +371,7 @@ const STORY = [
     },
   },
   {
-    img: "https://images.pexels.com/photos/1181396/pexels-photo-1181396.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    img: "/static/images/about/person-2.webp",
     step: "02",
     title: { uz: "Rasmiy manbalarni bir joyga yig'dik", ru: "Мы собрали официальные источники", en: "We gathered the official sources", de: "Wir haben die offiziellen Quellen gesammelt" },
     text: {
@@ -350,7 +382,7 @@ const STORY = [
     },
   },
   {
-    img: "https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    img: "/static/images/about/person-3.webp",
     step: "03",
     title: { uz: "Tushunarli tilga o'girdik", ru: "Перевели на понятный язык", en: "Translated into plain language", de: "Wir haben es verständlich übersetzt" },
     text: {
@@ -361,7 +393,7 @@ const STORY = [
     },
   },
   {
-    img: "https://images.pexels.com/photos/2422290/pexels-photo-2422290.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    img: "/static/images/about/person-4.webp",
     step: "04",
     title: { uz: "Ariza to'g'ridan-to'g'ri ish beruvchiga", ru: "Заявка напрямую работодателю", en: "Apply straight to the employer", de: "Bewerbung direkt beim Arbeitgeber" },
     text: {

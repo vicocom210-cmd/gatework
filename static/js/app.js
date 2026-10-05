@@ -58,6 +58,10 @@ function applyTheme(theme) {
   document.querySelectorAll("[data-theme-icon]").forEach((el) => {
     el.textContent = theme === "dark" ? "☀" : "☾";
   });
+  // UZ: menyudagi tugma qaysi rejimga o'tishini yozadi / EN: label of the theme switch
+  document.querySelectorAll("[data-theme-label]").forEach((el) => {
+    el.textContent = t(theme === "dark" ? "themeLight" : "themeDark");
+  });
   document.querySelectorAll("[data-logo]").forEach((img) => {
     img.src = img.dataset[theme === "dark" ? "white" : "black"];
   });
@@ -77,7 +81,9 @@ function initTheme() {
 function initIntro() {
   const intro = document.querySelector("[data-intro]");
   if (!intro) return;
-  if (sessionStorage.getItem(SS_INTRO)) {
+  // UZ: "Biz haqimizda"da o'zining suv to'lish animatsiyasi bor.
+  // EN: the About page has its own water-fill loader.
+  if (sessionStorage.getItem(SS_INTRO) || document.querySelector("[data-about-loader]")) {
     intro.remove();
     return;
   }
@@ -122,6 +128,10 @@ function renderText() {
   });
   document.querySelectorAll("[data-lang-btn]").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.langBtn === lang);
+  });
+  const dark = document.documentElement.classList.contains("dark");
+  document.querySelectorAll("[data-theme-label]").forEach((el) => {
+    el.textContent = t(dark ? "themeLight" : "themeDark");
   });
 }
 
@@ -593,7 +603,7 @@ function renderStory() {
   if (!box) return;
   box.innerHTML = STORY.map(
     (s, i) => `
-    <section class="story ${i % 2 ? "flip" : ""}">
+    <section class="story ${i % 2 ? "flip" : ""}" data-step="${s.step}">
       <div class="shot round glass">
         <img src="${s.img}" alt="${tl(s.title)}" loading="lazy" />
         <div class="aurora"></div>
@@ -704,6 +714,17 @@ function renderNavAuth() {
   const box = document.querySelector("[data-nav-auth]");
   if (!box) return;
 
+  // UZ: yon menyudagi kirish tugmalari (telefonda yuqoridagi "Kirish" yashirin).
+  // EN: login buttons in the side menu (on phones the top "Log in" is hidden).
+  const menuAuth = document.querySelector("[data-menu-auth]");
+  if (menuAuth) {
+    menuAuth.innerHTML = isLoggedIn
+      ? `<a class="btn-ghost" href="/profile">👤 ${t("navProfile")}</a>
+         <a class="btn-ghost" href="/archive">🗂 ${t("navArchive")}</a>`
+      : `<a class="btn-ghost" href="/login#login">${t("login")}</a>
+         <a class="btn-primary" href="/login#signup">${t("signup")}</a>`;
+  }
+
   if (!isLoggedIn) {
     box.innerHTML = `
       <a class="btn-ghost" href="/login#login">${t("login")}</a>
@@ -746,19 +767,11 @@ function renderNavAuth() {
   });
 }
 
-/* ---------- ADMIN BILAN BOG'LANISH (dropdown) ---------- */
+/* ---------- ADMIN BILAN BOG'LANISH (yon menyu ichida) ---------- */
 function initContactMenu() {
-  const menu = document.querySelector("[data-contact-menu]");
+  const menu = document.querySelector("[data-contact-list]");
   if (!menu || menu.dataset.bound) return;
   menu.dataset.bound = "1";
-  const btn = menu.querySelector(".contact-btn");
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = menu.classList.toggle("open");
-    btn.setAttribute("aria-expanded", open);
-  });
-  document.addEventListener("click", () => menu.classList.remove("open"));
-  menu.querySelector(".contact-pop").addEventListener("click", (e) => e.stopPropagation());
   menu.querySelectorAll("[data-copy]").forEach((c) =>
     c.addEventListener("click", async (e) => {
       e.preventDefault();
@@ -772,7 +785,8 @@ function initContactMenu() {
       } catch {}
     }),
   );
-  menu.querySelector("[data-open-chat]").addEventListener("click", () => menu.classList.remove("open"));
+  // chat ochilganda menyu yopiladi
+  menu.querySelector("[data-open-chat]").addEventListener("click", () => closeSiteMenu());
 }
 
 /* ---------- HAMMASI ---------- */
@@ -788,37 +802,101 @@ async function renderAll() {
   initReveal();
   renderNavAuth();
   initContactMenu();
-  initNavBurger();
+  initSiteMenu();
+  initMotionSetting();
   if (window.GWChat) GWChat.refresh();
   renderJobs();
 }
 
-/* UZ: Mobil hamburger menyu — tugma bosilganda navbarдаги havolalarni ochadi/yopadi.
-   RU: Мобильное меню-гамбургер — по клику открывает/закрывает ссылки навбара.
-   EN: Mobile hamburger menu — toggles the navbar links open/closed on click.
-   DE: Mobiles Hamburger-Menü — öffnet/schließt die Navbar-Links per Klick. */
-function initNavBurger() {
-  const burger = document.querySelector("[data-nav-toggle]");
-  const nav = document.querySelector(".nav");
-  if (!burger || !nav || burger.dataset.bound) return;
-  burger.dataset.bound = "1";
+/* UZ: YON MENYU — "uch chiziq" bosilganda chapdan chiqadi. Fon, ✕ yoki Esc
+       bilan yopiladi; ochiq paytda sahifa aylanmaydi.
+   RU: БОКОВОЕ МЕНЮ — выезжает слева по кнопке «три линии». Закрывается фоном,
+       ✕ или Esc; пока открыто, страница не прокручивается.
+   EN: SIDE MENU — slides in from the left on the "three lines" button. Closes
+       on backdrop, ✕ or Esc; the page doesn't scroll while it's open.
+   DE: SEITENMENÜ — gleitet beim „Drei-Striche“-Button von links herein.
+       Schließt per Hintergrund, ✕ oder Esc; die Seite scrollt dabei nicht. */
+let menuCloseTimer = null;
 
-  burger.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = nav.classList.toggle("open");
-    burger.setAttribute("aria-expanded", open ? "true" : "false");
+function openSiteMenu() {
+  const menu = document.querySelector("[data-menu]");
+  const btn = document.querySelector("[data-menu-open]");
+  if (!menu) return;
+  clearTimeout(menuCloseTimer);
+  menu.hidden = false;
+  document.body.classList.add("menu-lock");
+  btn && btn.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => requestAnimationFrame(() => menu.classList.add("open")));
+  const first = menu.querySelector(".sm-close");
+  first && first.focus({ preventScroll: true });
+}
+
+function closeSiteMenu() {
+  const menu = document.querySelector("[data-menu]");
+  const btn = document.querySelector("[data-menu-open]");
+  if (!menu || menu.hidden) return;
+  menu.classList.remove("open");
+  document.body.classList.remove("menu-lock");
+  btn && btn.setAttribute("aria-expanded", "false");
+  menuCloseTimer = setTimeout(() => (menu.hidden = true), 550);
+}
+
+function initSiteMenu() {
+  const btn = document.querySelector("[data-menu-open]");
+  const menu = document.querySelector("[data-menu]");
+  if (!btn || !menu || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+
+  btn.addEventListener("click", () => (menu.classList.contains("open") ? closeSiteMenu() : openSiteMenu()));
+  menu.querySelectorAll("[data-menu-close]").forEach((el) => el.addEventListener("click", closeSiteMenu));
+  menu.querySelectorAll(".sm-links a, .sm-auth a").forEach((a) => a.addEventListener("click", closeSiteMenu));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSiteMenu();
   });
-  // UZ: menyuдан tashqariga bosilsa yoki havola bosilsa — yopamiz.
-  // RU: клик вне меню или по ссылке — закрываем.
-  // EN: clicking outside the menu or on a link — close it.
-  // DE: Klick außerhalb des Menüs oder auf einen Link — schließen.
-  document.addEventListener("click", () => {
-    nav.classList.remove("open");
-    burger.setAttribute("aria-expanded", "false");
+
+  // UZ: aylantirilganda yuqori panel "shisha" bo'ladi / EN: glassy top bar on scroll
+  const bar = document.querySelector("[data-topbar]");
+  if (bar) {
+    const onScroll = () => bar.classList.toggle("scrolled", window.scrollY > 24);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+}
+
+/* UZ: SOZLAMA — "Animatsiyalar". O'chirilsa, sayt animatsiyalari (va
+       "Biz haqimizda" kirish animatsiyasi) qisqaradi. Tanlov saqlanadi.
+   EN: SETTING — "Animations". When off, site animations (and the About
+       intro) are cut short. The choice is remembered. */
+const LS_MOTION = "gatework-motion";
+
+function applyMotion(on) {
+  document.documentElement.classList.toggle("reduce-motion", !on);
+  document.querySelectorAll("[data-motion-toggle]").forEach((b) => {
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", on ? "true" : "false");
   });
-  nav.querySelectorAll(".nav-links a").forEach((a) =>
-    a.addEventListener("click", () => nav.classList.remove("open")),
-  );
+}
+
+function motionEnabled() {
+  try {
+    return localStorage.getItem(LS_MOTION) !== "off";
+  } catch {
+    return true;
+  }
+}
+window.motionEnabled = motionEnabled;
+
+function initMotionSetting() {
+  applyMotion(motionEnabled());
+  document.querySelectorAll("[data-motion-toggle]").forEach((b) => {
+    if (b.dataset.bound) return;
+    b.dataset.bound = "1";
+    b.addEventListener("click", () => {
+      const on = !motionEnabled();
+      try { localStorage.setItem(LS_MOTION, on ? "on" : "off"); } catch {}
+      applyMotion(on);
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

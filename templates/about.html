@@ -4,31 +4,84 @@
 {% block title %}Biz haqimizda — Gate Work{% endblock %}
 {% block description %}Gate Work rasmiy davlat mehnat portallaridagi vakansiyalarni uch tilda, viza belgilari bilan bir joyga jamlaydi.{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{% static 'css/about.css' %}?v=2" />
+{% endblock %}
+
 {% block content %}
-<section class="hero" style="padding-bottom:20px">
-  <div class="aurora"></div>
-  <div class="orb" style="left:-10%;top:0;height:20rem;width:20rem;background:var(--primary)"></div>
-  <div class="wrap" style="max-width:820px">
-    <span class="eyebrow glass-soft reveal" data-t="aboutTag"></span>
-    <h1 class="reveal" style="transition-delay:.1s" data-t="aboutTitle"></h1>
-    <p class="tagline reveal" style="transition-delay:.2s" data-t="aboutText"></p>
+<!-- =====================================================================
+     1. YUKLASH: Gate Work belgisi ichiga suv to'ladi (0 → 100%).
+        Shu vaqtda sahifa rasmlari va shriftlari HAQIQATAN yuklanadi —
+        keyingi animatsiyalar qotib qolmasligi uchun.
+     ===================================================================== -->
+<div class="aw-loader" data-about-loader role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <div class="aw-vessel" style="--mark: url('{% static 'images/logo-mark.png' %}')">
+    <div class="aw-empty"></div>
+    <div class="aw-water" data-water>
+      <svg class="aw-wave w1" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 40 C150 10 300 10 450 40 S750 70 900 40 S1100 10 1200 40 V80 H0 Z" />
+      </svg>
+      <svg class="aw-wave w2" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0 40 C150 70 300 70 450 40 S750 10 900 40 S1100 70 1200 40 V80 H0 Z" />
+      </svg>
+      <span class="aw-bubble b1"></span><span class="aw-bubble b2"></span><span class="aw-bubble b3"></span>
+    </div>
+  </div>
+  <div class="aw-percent"><b data-percent>0</b><span>%</span></div>
+  <p class="aw-caption"><span data-t="aboutLoading">Yuklanmoqda</span><i>.</i><i>.</i><i>.</i></p>
+</div>
+
+<!-- 2. OCHILISH: logotip bilan boshlanadi -->
+<section class="aw-open" data-aw-open>
+  <div class="aw-open-glow" aria-hidden="true"></div>
+  <img class="aw-open-logo" data-logo
+       data-white="{% static 'images/logo-white.png' %}"
+       data-black="{% static 'images/logo-black.png' %}"
+       src="{% static 'images/logo-white.png' %}"
+       alt="Gate Work" />
+  <h1 class="aw-title">
+    <em data-t="aboutHeroItalic"></em>
+    <span data-t="aboutHeroCaps"></span>
+  </h1>
+  <p class="aw-lead" data-t="aboutText"></p>
+  <a class="aw-scroll" href="#story">
+    <span class="aw-scroll-ring" aria-hidden="true">↓</span>
+    <span data-t="aboutScroll"></span>
+  </a>
+</section>
+
+<!-- 3. HIKOYA: 4 bosqich (rasmlar bilan) -->
+<div id="story" class="aw-story" data-story></div>
+
+<!-- 4. RAQAMLAR -->
+<section class="aw-facts wrap">
+  <h2 class="reveal" data-t="aboutFactsTitle"></h2>
+  <div class="aw-facts-grid">
+    <div class="aw-fact reveal"><b data-to="5">0</b><small data-t="statCountries"></small></div>
+    <div class="aw-fact reveal" style="transition-delay:.08s"><b data-to="3">0</b><small data-t="statSectors"></small></div>
+    <div class="aw-fact reveal" style="transition-delay:.16s"><b data-to="4">0</b><small data-t="aboutFactLangs"></small></div>
+    <div class="aw-fact reveal" style="transition-delay:.24s"><b data-to="0">0</b><small data-t="aboutFactFee"></small></div>
   </div>
 </section>
 
-<div data-story></div>
-
 {% include "_benefits.html" %}
 
-<section class="logo-reveal">
-  <div class="aurora" style="position:absolute;inset:0;z-index:-1"></div>
+<!-- 5. YAKUN: yana Gate Work -->
+<section class="logo-reveal aw-final">
   <img data-logo
        data-white="{% static 'images/logo-white.png' %}"
        data-black="{% static 'images/logo-black.png' %}"
        src="{% static 'images/logo-white.png' %}"
        alt="Gate Work logotipi" />
   <div class="slogan" data-slogan></div>
-  <p style="margin-top:34px">
+  <p class="aw-final-text" data-t="aboutFinalText"></p>
+  <p class="aw-final-actions">
+    <a class="btn-primary" href="{% url 'index' %}#jobs" data-t="aboutCta"></a>
     <a class="btn-ghost" href="{% url 'index' %}" data-t="backHome"></a>
   </p>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/about.js' %}?v=2"></script>
 {% endblock %}
