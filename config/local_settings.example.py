@@ -39,14 +39,3 @@ FINDAJOB_API_KEY = ""
 # ============================================================================
 EMAIL_HOST_USER = ""        # masalan / e.g. "gatework.uz@gmail.com"
 EMAIL_HOST_PASSWORD = ""    # Gmail app password (16 belgi, probelsiz)
-
-# ============================================================================
-# SMS (Eskiz.uz) — telefonga kod yuborish uchun (O'zbekiston)
-# UZ: eskiz.uz da ro'yxatdan o'tib, email va parolingizni yozing. Bo'sh bo'lsa —
-#     SMS kodi terminalda chiqadi (test rejimi).
-# RU: зарегистрируйтесь на eskiz.uz. Пусто — код в терминал (тест).
-# EN: register at eskiz.uz. Empty — the SMS code prints to the terminal (test).
-# DE: bei eskiz.uz registrieren. Leer — SMS-Code im Terminal (Test).
-# ============================================================================
-ESKIZ_EMAIL = ""
-ESKIZ_PASSWORD = ""

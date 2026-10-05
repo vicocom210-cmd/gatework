@@ -74,6 +74,9 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
     void msg.offsetWidth; // reflow — animatsiya qayta ishga tushishi uchun
     msg.classList.add("show");
     if (isError) msg.classList.add("err");
+    // UZ: xabar forma ostida — ekrandan tashqarida qolmasin, unga aylantiramiz.
+    // EN: the message sits below the form — scroll it into view.
+    msg.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   /* ---------- HAQIQIY yuborish (email/parol) ---------- */
@@ -192,16 +195,48 @@ const GOOGLE_CLIENT_ID = "509245131008-kib34dra6sb7djvqjqjh85ac9ucma0av.apps.goo
 
     wrap.querySelector("[data-vcancel]").addEventListener("click", () => wrap.remove());
 
-    wrap.querySelector("[data-vresend]").addEventListener("click", async () => {
+    // UZ: "Qayta yuborish" — 60 soniya o'chiq turadi (ketma-ket xatlar spamga
+    //     tushadi). EN: resend is disabled for 60 s (bursts of mail look like spam).
+    const resendBtn = wrap.querySelector("[data-vresend]");
+    const resendLabel = resendBtn.textContent;
+    let resendTimer = null;
+    function cooldown(sec) {
+      clearInterval(resendTimer);
+      resendBtn.disabled = true;
+      resendBtn.style.opacity = "0.5";
+      resendBtn.textContent = `${resendLabel} (${sec})`;
+      resendTimer = setInterval(() => {
+        sec -= 1;
+        if (sec > 0 && document.body.contains(wrap)) {
+          resendBtn.textContent = `${resendLabel} (${sec})`;
+          return;
+        }
+        clearInterval(resendTimer);
+        resendBtn.disabled = false;
+        resendBtn.style.opacity = "";
+        resendBtn.textContent = resendLabel;
+      }, 1000);
+    }
+    cooldown(60); // kod hozirgina yuborildi
+
+    resendBtn.addEventListener("click", async () => {
       vmsg.style.color = "var(--muted-fg)";
       vmsg.textContent = "...";
       try {
-        await fetch("/api/register/resend", {
+        const res = await fetch("/api/register/resend", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
-        vmsg.textContent = t("verifyResent");
+        const data = await res.json();
+        if (data.ok) {
+          vmsg.textContent = t("verifyResent");
+          cooldown(60);
+        } else {
+          vmsg.style.color = "#ff6b6b";
+          vmsg.textContent = data.error || "Xatolik";
+          if (data.wait) cooldown(data.wait);
+        }
       } catch { vmsg.textContent = ""; }
     });
 

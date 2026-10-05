@@ -8,12 +8,13 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
 from .models import User, PendingSignup
-from .serializers import RegisterSerializer
-from .notify import generate_code, send_email_code, send_sms
+from .notify import generate_code, send_email_code
 
 # UZ: Kod necha daqiqa amal qiladi / RU: сколько минут действует код /
 # EN: how many minutes a code stays valid / DE: wie lange ein Code gültig ist
 CODE_TTL_MIN = 10
+# UZ: kodni qayta yuborish oralig'i (soniya) / EN: resend cooldown (seconds)
+RESEND_COOLDOWN_SEC = 60
 
 
 class CSRFExemptSessionAuthentication(SessionAuthentication):
@@ -44,34 +45,35 @@ class RegisterView(APIView):
     # bosqichida (keyinroq) buni to'g'ri yechimga almashtiramiz.
     authentication_classes = []
     """
-    Eski Flask'dagi @app.route("/api/register", methods=["POST"]) ning
-    Django'dagi ekvivalenti.
+    UZ: ESKI /api/register — hisobni email tasdiqlashsiz yaratardi. Endi
+        ro'yxatdan o'tish faqat /api/register/start + /verify orqali. Bu manzil
+        faqat keshlangan eski auth.js uchun qoldirilgan: hisob yaratmaydi,
+        sahifani yangilashni so'raydi.
+    EN: OLD /api/register — created accounts without email verification. Sign-up
+        now goes only through /api/register/start + /verify. Kept only for a
+        cached old auth.js: creates nothing, asks to reload the page.
     """
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(
-                {"ok": True, "user": {"id": user.id, "name": user.first_name, "email": user.email, "isAdmin": user.is_staff}},
-                status=status.HTTP_201_CREATED,
-            )
-        return Response({"ok": False, "errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"ok": False, "error": "Sahifa eskirgan. Iltimos, Ctrl+F5 bosib qayta urinib ko'ring."},
+            status=status.HTTP_410_GONE,
+        )
 
 
 class RegisterStartView(APIView):
     """
     UZ: /api/register/start — ro'yxatdan o'tishning 1-bosqichi. Ma'lumotlarni
         qabul qiladi, User YARATMAYDI, balki vaqtinchalik PendingSignup yozib,
-        email'ga (va telefon bo'lsa SMS'ga) 6 xonali kod yuboradi.
+        FAQAT email'ga 6 xonali kod yuboradi (telefon saqlanadi, SMS yo'q).
     RU: /api/register/start — шаг 1. Принимает данные, User НЕ создаёт, пишет
-        временный PendingSignup и шлёт 6-значный код на email (и SMS, если есть
-        телефон).
+        временный PendingSignup и шлёт 6-значный код ТОЛЬКО на email (телефон
+        сохраняется, SMS нет).
     EN: /api/register/start — step 1. Takes the data, does NOT create the User,
         stores a temporary PendingSignup and sends a 6-digit code to the email
-        (and SMS if a phone was given).
+        ONLY (the phone is stored, no SMS).
     DE: /api/register/start — Schritt 1. Nimmt die Daten, erstellt KEINEN User,
         speichert einen temporären PendingSignup und sendet einen 6-stelligen
-        Code an die E-Mail (und SMS bei Telefonnummer).
+        Code NUR an die E-Mail (Telefon wird gespeichert, keine SMS).
     """
     authentication_classes = []
 
@@ -95,7 +97,6 @@ class RegisterStartView(APIView):
             return Response({"ok": False, "error": "Bu email allaqachon ro'yxatdan o'tgan."}, status=400)
 
         email_code = generate_code()
-        phone_code = generate_code() if phone else ""
 
         # UZ: eski pending bo'lsa — yangilaymiz (qayta urinish). Parol HASH holda.
         # RU: если был pending — обновляем (повторная попытка). Пароль хешируется.
@@ -110,7 +111,7 @@ class RegisterStartView(APIView):
                 "birth_date": birth_date,
                 "password": make_password(password),
                 "email_code": email_code,
-                "phone_code": phone_code,
+                "phone_code": "",
                 "email_verified": False,
                 "phone_verified": False,
                 "attempts": 0,
@@ -118,22 +119,26 @@ class RegisterStartView(APIView):
             },
         )
 
-        send_email_code(email, email_code)
-        if phone:
-            send_sms(phone, phone_code)
+        # UZ: Kod FAQAT Gmail orqali yuboriladi. Telefon raqami saqlanadi,
+        #     lekin unga SMS yuborilmaydi.
+        # EN: The code goes ONLY by email. The phone is stored, no SMS is sent.
+        if not send_email_code(email, email_code):
+            PendingSignup.objects.filter(email=email).delete()
+            return Response({"ok": False, "error": "Tasdiqlash kodini emailga yuborib bo'lmadi. Keyinroq urinib ko'ring."},
+                            status=502)
 
-        return Response({"ok": True, "needPhone": bool(phone)})
+        return Response({"ok": True, "needPhone": False})
 
 
 class RegisterVerifyView(APIView):
     """
-    UZ: /api/register/verify — 2-bosqich. Email (va telefon) kodlarini tekshiradi.
+    UZ: /api/register/verify — 2-bosqich. Email kodini tekshiradi.
         To'g'ri bo'lsa — User yaratiladi, tizimga kiritiladi, pending o'chiriladi.
-    RU: /api/register/verify — шаг 2. Проверяет коды email (и телефона). Верно —
+    RU: /api/register/verify — шаг 2. Проверяет код из email. Верно —
         создаёт User, логинит, удаляет pending.
-    EN: /api/register/verify — step 2. Checks the email (and phone) codes. On
+    EN: /api/register/verify — step 2. Checks the email code. On
         success it creates the User, logs them in, and deletes the pending record.
-    DE: /api/register/verify — Schritt 2. Prüft die E-Mail-(und Telefon-)Codes.
+    DE: /api/register/verify — Schritt 2. Prüft den E-Mail-Code.
         Bei Erfolg wird der User erstellt, angemeldet und der Pending gelöscht.
     """
     authentication_classes = []
@@ -142,7 +147,6 @@ class RegisterVerifyView(APIView):
         data = request.data
         email = (data.get("email") or "").strip().lower()
         email_code = (data.get("emailCode") or "").strip()
-        phone_code = (data.get("phoneCode") or "").strip()
 
         try:
             pending = PendingSignup.objects.get(email=email)
@@ -163,11 +167,6 @@ class RegisterVerifyView(APIView):
             pending.attempts += 1
             pending.save(update_fields=["attempts"])
             return Response({"ok": False, "error": "Email kodi noto'g'ri."}, status=400)
-
-        if pending.phone and phone_code != pending.phone_code:
-            pending.attempts += 1
-            pending.save(update_fields=["attempts"])
-            return Response({"ok": False, "error": "SMS kodi noto'g'ri."}, status=400)
 
         # UZ: hammasi to'g'ri — User yaratamiz. Parol allaqachon HASH, shuning uchun
         #     to'g'ridan-to'g'ri qo'yamiz (set_password ishlatmaymiz).
@@ -200,10 +199,10 @@ class RegisterVerifyView(APIView):
 
 class RegisterResendView(APIView):
     """
-    UZ: /api/register/resend — kodlarni qayta yuboradi (yangi kod bilan).
-    RU: /api/register/resend — повторно отправляет коды (с новым кодом).
-    EN: /api/register/resend — resends the codes (with a fresh code).
-    DE: /api/register/resend — sendet die Codes erneut (mit neuem Code).
+    UZ: /api/register/resend — email kodini qayta yuboradi (yangi kod bilan).
+    RU: /api/register/resend — повторно отправляет код на email (новый код).
+    EN: /api/register/resend — resends the email code (a fresh code).
+    DE: /api/register/resend — sendet den E-Mail-Code erneut (neuer Code).
     """
     authentication_classes = []
 
@@ -213,15 +212,22 @@ class RegisterResendView(APIView):
             pending = PendingSignup.objects.get(email=email)
         except PendingSignup.DoesNotExist:
             return Response({"ok": False, "error": "Avval ro'yxatdan o'ting."}, status=400)
+
+        # UZ: 60 soniyada bir martadan ko'p yubormaymiz — ketma-ket bir xil
+        #     xatlar Gmail'da spamga tushishga sabab bo'ladi.
+        # EN: at most once per 60 s — bursts of identical mail look like spam.
+        wait = RESEND_COOLDOWN_SEC - int((timezone.now() - pending.created_at).total_seconds())
+        if wait > 0:
+            return Response({"ok": False, "error": f"Yangi kodni {wait} soniyadan keyin so'rashingiz mumkin.",
+                             "wait": wait}, status=429)
+
         pending.email_code = generate_code()
-        if pending.phone:
-            pending.phone_code = generate_code()
         pending.attempts = 0
         pending.created_at = timezone.now()
         pending.save()
-        send_email_code(pending.email, pending.email_code)
-        if pending.phone:
-            send_sms(pending.phone, pending.phone_code)
+        if not send_email_code(pending.email, pending.email_code):
+            return Response({"ok": False, "error": "Kodni emailga yuborib bo'lmadi. Keyinroq urinib ko'ring."},
+                            status=502)
         return Response({"ok": True})
 
 

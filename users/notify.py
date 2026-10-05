@@ -1,24 +1,20 @@
 """
 users/notify.py
 ============================================================================
-UZ: Tasdiqlash kodlarini yuborish — email (Django orqali) va SMS (Eskiz.uz
-    orqali, kalit bo'lsa). Kalit/sozlama bo'lmasa — kod TERMINALda chiqadi
-    (test rejimi), shunda ishlab chiqish paytida ham sinab ko'rsa bo'ladi.
-RU: Отправка кодов подтверждения — email (через Django) и SMS (через Eskiz.uz,
-    если есть ключ). Без ключа код печатается в ТЕРМИНАЛ (тестовый режим).
-EN: Sending verification codes — email (via Django) and SMS (via Eskiz.uz when
-    a key is set). Without a key the code is printed to the TERMINAL (test mode).
-DE: Versand von Bestätigungscodes — E-Mail (über Django) und SMS (über Eskiz.uz,
-    wenn ein Schlüssel vorhanden ist). Ohne Schlüssel wird der Code im TERMINAL
-    ausgegeben (Testmodus).
+UZ: Tasdiqlash kodini yuborish — faqat email (Django/Gmail orqali). Gmail
+    sozlanmagan bo'lsa — kod TERMINALda chiqadi (test rejimi).
+RU: Отправка кода подтверждения — только email (через Django/Gmail). Без
+    настроек Gmail код печатается в ТЕРМИНАЛ (тестовый режим).
+EN: Sending the verification code — email only (via Django/Gmail). Without
+    Gmail settings the code is printed to the TERMINAL (test mode).
+DE: Versand des Bestätigungscodes — nur per E-Mail (über Django/Gmail). Ohne
+    Gmail-Einstellungen wird der Code im TERMINAL ausgegeben (Testmodus).
 ============================================================================
 """
-import os
-import random
+import secrets
 
-import requests
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 
 
 def generate_code():
@@ -28,12 +24,7 @@ def generate_code():
     EN: A random 6-digit code.
     DE: Ein zufälliger 6-stelliger Code.
     """
-    return f"{random.randint(0, 999999):06d}"
-
-
-def _get(name):
-    val = os.environ.get(name) or getattr(settings, name, "")
-    return (val or "").strip()
+    return f"{secrets.randbelow(1_000_000):06d}"  # secrets — taxmin qilib bo'lmaydi
 
 
 def send_email_code(email, code):
@@ -48,81 +39,33 @@ def send_email_code(email, code):
     DE: Sendet den Code an die E-Mail. Mit echtem SMTP (Gmail) geht eine echte
         Nachricht; sonst gibt das Console-Backend den Code aus.
     """
-    subject = "Gate Work — tasdiqlash kodi / verification code"
-    body = (
+    # UZ: Spam filtrlari bir tilli, aniq mavzuli va oddiy matn + HTML ikkala
+    #     variantli xatlarni yaxshiroq qabul qiladi.
+    # EN: Spam filters treat single-language, clear-subject, text+HTML mail better.
+    subject = f"{code} — Gate Work tasdiqlash kodingiz"
+    text = (
         f"Assalomu alaykum!\n\n"
-        f"Gate Work ro'yxatdan o'tish uchun tasdiqlash kodingiz: {code}\n"
-        f"Kod 10 daqiqa amal qiladi.\n\n"
-        f"Your Gate Work verification code: {code} (valid for 10 minutes).\n"
+        f"Gate Work'da ro'yxatdan o'tishni yakunlash uchun tasdiqlash kodingiz: {code}\n\n"
+        f"Kod 10 daqiqa amal qiladi. Agar siz ro'yxatdan o'tmagan bo'lsangiz, "
+        f"bu xatga e'tibor bermang.\n\n"
+        f"Hurmat bilan,\nGate Work jamoasi"
     )
+    html = f"""<!doctype html>
+<html lang="uz"><body style="margin:0;padding:24px;background:#f4f6f8;font-family:Arial,sans-serif;color:#1a1a1a;">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;">
+    <h2 style="margin:0 0 16px;font-size:20px;">Gate Work</h2>
+    <p style="margin:0 0 16px;font-size:15px;">Assalomu alaykum! Ro'yxatdan o'tishni yakunlash uchun tasdiqlash kodingiz:</p>
+    <p style="margin:0 0 16px;font-size:32px;font-weight:bold;letter-spacing:8px;text-align:center;">{code}</p>
+    <p style="margin:0 0 8px;font-size:13px;color:#555555;">Kod 10 daqiqa amal qiladi.</p>
+    <p style="margin:0;font-size:13px;color:#555555;">Agar siz ro'yxatdan o'tmagan bo'lsangiz, bu xatga e'tibor bermang.</p>
+  </div>
+</body></html>"""
     try:
-        send_mail(
-            subject,
-            body,
-            getattr(settings, "DEFAULT_FROM_EMAIL", None),
-            [email],
-            fail_silently=False,
-        )
+        msg = EmailMultiAlternatives(subject, text, getattr(settings, "DEFAULT_FROM_EMAIL", None), [email])
+        msg.attach_alternative(html, "text/html")
+        msg.send(fail_silently=False)
+        print(f"[Email yuborildi] {email}")
         return True
     except Exception as e:
         print(f"[Email yuborish xatosi] {e}  (kod: {code})")
-        return False
-
-
-def send_sms(phone, code):
-    """
-    UZ: Telefon raqamга SMS kod yuboradi. Eskiz.uz kaliti (ESKIZ_EMAIL +
-        ESKIZ_PASSWORD) sozlangan bo'lsa — haqiqiy SMS; bo'lmasa kod TERMINALda
-        chiqadi (test rejimi). Shunday qilib kalitsiz ham sinab ko'rsa bo'ladi.
-    RU: Отправляет SMS-код. Если настроен Eskiz.uz (ESKIZ_EMAIL + ESKIZ_PASSWORD)
-        — реальная SMS; иначе код печатается в ТЕРМИНАЛ (тестовый режим).
-    EN: Sends an SMS code. If Eskiz.uz is configured (ESKIZ_EMAIL +
-        ESKIZ_PASSWORD) a real SMS goes out; otherwise the code is printed to the
-        TERMINAL (test mode).
-    DE: Sendet einen SMS-Code. Mit Eskiz.uz (ESKIZ_EMAIL + ESKIZ_PASSWORD) echte
-        SMS; sonst wird der Code im TERMINAL ausgegeben (Testmodus).
-    """
-    email = _get("ESKIZ_EMAIL")
-    password = _get("ESKIZ_PASSWORD")
-    text = f"Gate Work tasdiqlash kodi: {code}"
-
-    # UZ: Kalit yo'q bo'lsa — test rejimi: kodni terminalga chiqaramiz.
-    # RU: Нет ключа — тестовый режим: печатаем код в терминал.
-    # EN: No key — test mode: print the code to the terminal.
-    # DE: Kein Schlüssel — Testmodus: Code im Terminal ausgeben.
-    if not email or not password:
-        print(f"[SMS TEST REJIMI] {phone} -> {text}")
-        return True
-
-    # UZ: Eskiz.uz — O'zbekiston SMS shlyuzi. Avval token olamiz, keyin yuboramiz.
-    # RU: Eskiz.uz — SMS-шлюз Узбекистана. Сначала токен, затем отправка.
-    # EN: Eskiz.uz — Uzbekistan SMS gateway. Get a token first, then send.
-    # DE: Eskiz.uz — SMS-Gateway Usbekistans. Erst Token, dann senden.
-    try:
-        tok_res = requests.post(
-            "https://notify.eskiz.uz/api/auth/login",
-            data={"email": email, "password": password},
-            timeout=10,
-        )
-        tok_res.raise_for_status()
-        token = (tok_res.json().get("data") or {}).get("token")
-        if not token:
-            print("[Eskiz] token olinmadi")
-            return False
-
-        # UZ: raqamни faqat raqamlar ko'rinishiga keltiramiz (998901234567).
-        # RU: приводим номер к цифрам (998901234567).
-        # EN: normalize the phone to digits (998901234567).
-        # DE: Nummer auf Ziffern normalisieren (998901234567).
-        digits = "".join(ch for ch in phone if ch.isdigit())
-        res = requests.post(
-            "https://notify.eskiz.uz/api/message/sms/send",
-            headers={"Authorization": f"Bearer {token}"},
-            data={"mobile_phone": digits, "message": text, "from": "4546"},
-            timeout=10,
-        )
-        res.raise_for_status()
-        return True
-    except Exception as e:
-        print(f"[SMS yuborish xatosi] {e}  (kod: {code})")
         return False
