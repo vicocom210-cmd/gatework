@@ -5,7 +5,7 @@
 {% block description %}Gate Work rasmiy davlat mehnat portallaridagi vakansiyalarni uch tilda, viza belgilari bilan bir joyga jamlaydi.{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'css/about.css' %}?v=2" />
+<link rel="stylesheet" href="{% static 'css/about.css' %}?v=4" />
 {% endblock %}
 
 {% block content %}
@@ -31,57 +31,69 @@
   <p class="aw-caption"><span data-t="aboutLoading">Yuklanmoqda</span><i>.</i><i>.</i><i>.</i></p>
 </div>
 
-<!-- 2. OCHILISH: logotip bilan boshlanadi -->
-<section class="aw-open" data-aw-open>
-  <div class="aw-open-glow" aria-hidden="true"></div>
-  <img class="aw-open-logo" data-logo
-       data-white="{% static 'images/logo-white.png' %}"
-       data-black="{% static 'images/logo-black.png' %}"
-       src="{% static 'images/logo-white.png' %}"
-       alt="Gate Work" />
-  <h1 class="aw-title">
-    <em data-t="aboutHeroItalic"></em>
-    <span data-t="aboutHeroCaps"></span>
-  </h1>
-  <p class="aw-lead" data-t="aboutText"></p>
-  <a class="aw-scroll" href="#story">
-    <span class="aw-scroll-ring" aria-hidden="true">↓</span>
-    <span data-t="aboutScroll"></span>
-  </a>
-</section>
+<!-- =====================================================================
+     2. SAYOHAT: sahna joyida turadi (sticky), aylantirish esa "kamerani"
+        oldinga suradi — sahnalar uzoqdan uchib kelib, yonidan o'tadi.
+        Animatsiyalar o'chirilgan bo'lsa, oddiy sahifa bo'lib ko'rinadi.
+     ===================================================================== -->
+<section class="aw-journey" data-journey>
+  <div class="aw-stage" data-stage>
+    <div class="aw-stars" data-stars aria-hidden="true"></div>
 
-<!-- 3. HIKOYA: 4 bosqich (rasmlar bilan) -->
-<div id="story" class="aw-story" data-story></div>
+    <!-- logotip bilan ochilish -->
+    <div class="aw-scene aw-open" data-scene="open">
+      <div class="aw-open-glow" aria-hidden="true"></div>
+      <img class="aw-open-logo" data-logo
+           data-white="{% static 'images/logo-white.png' %}"
+           data-black="{% static 'images/logo-black.png' %}"
+           src="{% static 'images/logo-white.png' %}"
+           alt="Gate Work" />
+      <h1 class="aw-title">
+        <em data-t="aboutHeroItalic"></em>
+        <span data-t="aboutHeroCaps"></span>
+      </h1>
+      <p class="aw-lead" data-t="aboutText"></p>
+      <button class="aw-scroll" type="button" data-journey-next>
+        <span class="aw-scroll-ring" aria-hidden="true">↓</span>
+        <span data-t="aboutScroll"></span>
+      </button>
+    </div>
 
-<!-- 4. RAQAMLAR -->
-<section class="aw-facts wrap">
-  <h2 class="reveal" data-t="aboutFactsTitle"></h2>
-  <div class="aw-facts-grid">
-    <div class="aw-fact reveal"><b data-to="5">0</b><small data-t="statCountries"></small></div>
-    <div class="aw-fact reveal" style="transition-delay:.08s"><b data-to="3">0</b><small data-t="statSectors"></small></div>
-    <div class="aw-fact reveal" style="transition-delay:.16s"><b data-to="4">0</b><small data-t="aboutFactLangs"></small></div>
-    <div class="aw-fact reveal" style="transition-delay:.24s"><b data-to="0">0</b><small data-t="aboutFactFee"></small></div>
+    <!-- 4 bosqichli hikoya (app.js renderStory chizadi) -->
+    <div class="aw-cards" id="story" data-story></div>
+
+    <!-- raqamlar -->
+    <div class="aw-scene aw-facts" data-scene="facts">
+      <h2 data-t="aboutFactsTitle"></h2>
+      <div class="aw-facts-grid">
+        <div class="aw-fact"><b data-goal="5">0</b><small data-t="statCountries"></small></div>
+        <div class="aw-fact"><b data-goal="3">0</b><small data-t="statSectors"></small></div>
+        <div class="aw-fact"><b data-goal="4">0</b><small data-t="aboutFactLangs"></small></div>
+        <div class="aw-fact"><b data-goal="0">0</b><small data-t="aboutFactFee"></small></div>
+      </div>
+    </div>
+
+    <!-- yakun: yana Gate Work -->
+    <div class="aw-scene aw-final" data-scene="final">
+      <img data-logo
+           data-white="{% static 'images/logo-white.png' %}"
+           data-black="{% static 'images/logo-black.png' %}"
+           src="{% static 'images/logo-white.png' %}"
+           alt="Gate Work logotipi" />
+      <p class="aw-final-text" data-t="aboutFinalText"></p>
+      <p class="aw-final-actions">
+        <a class="btn-primary" href="{% url 'index' %}#jobs" data-t="aboutCta"></a>
+        <a class="btn-ghost" href="{% url 'index' %}" data-t="backHome"></a>
+      </p>
+    </div>
+
+    <!-- bosqichlar ro'yxati va jarayon chizig'i -->
+    <nav class="aw-rail" data-rail aria-label="Bosqichlar"></nav>
+    <div class="aw-progress" aria-hidden="true"><i data-progress></i></div>
   </div>
-</section>
-
-{% include "_benefits.html" %}
-
-<!-- 5. YAKUN: yana Gate Work -->
-<section class="logo-reveal aw-final">
-  <img data-logo
-       data-white="{% static 'images/logo-white.png' %}"
-       data-black="{% static 'images/logo-black.png' %}"
-       src="{% static 'images/logo-white.png' %}"
-       alt="Gate Work logotipi" />
-  <div class="slogan" data-slogan></div>
-  <p class="aw-final-text" data-t="aboutFinalText"></p>
-  <p class="aw-final-actions">
-    <a class="btn-primary" href="{% url 'index' %}#jobs" data-t="aboutCta"></a>
-    <a class="btn-ghost" href="{% url 'index' %}" data-t="backHome"></a>
-  </p>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/about.js' %}?v=2"></script>
+<script src="{% static 'js/about.js' %}?v=6"></script>
 {% endblock %}
