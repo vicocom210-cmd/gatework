@@ -15,6 +15,13 @@
   {% block head %}{% endblock %}
   <!-- SINOV DIZAYNI: eski ko'rinishga qaytish uchun shu qatorni o'chiring -->
   <link rel="stylesheet" href="{% static 'css/theme-test.css' %}?v=3" />
+  <!-- Bo'rtma tugmalar (Sozlamalarda yoqib/o'chiriladi) -->
+  <link rel="stylesheet" href="{% static 'css/puffy.css' %}?v=1" />
+  <!-- tanlovni sahifa chizilishidan OLDIN qo'llaymiz — tugmalar "sakramasin" -->
+  <script>
+    try { if (localStorage.getItem("gatework-puffy") !== "off") document.documentElement.classList.add("puffy"); }
+    catch (e) { document.documentElement.classList.add("puffy"); }
+  </script>
 </head>
 <body>
 
@@ -114,6 +121,12 @@
           <span class="track"><i></i></span>
         </button>
       </div>
+      <div class="sm-row">
+        <span><span data-t="settingsPuffy"></span><small data-t="settingsPuffyHint"></small></span>
+        <button class="switch" type="button" data-puffy-toggle role="switch" aria-checked="true">
+          <span class="track"><i></i></span>
+        </button>
+      </div>
     </section>
 
     <!-- ADMIN BILAN BOG'LANISH -->
@@ -187,8 +200,8 @@
   <div class="wrap bottom">© 2026 Gate Work</div>
 </footer>
 
-<script src="{% static 'js/data.js' %}?v=5"></script>
-<script src="{% static 'js/app.js' %}?v=5"></script>
+<script src="{% static 'js/data.js' %}?v=6"></script>
+<script src="{% static 'js/app.js' %}?v=6"></script>
 <script src="{% static 'js/chat.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>

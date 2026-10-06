@@ -1,0 +1,124 @@
+/* =====================================================================
+   BO'RTMA TUGMALAR ("claymorphism")
+   UZ: tugmalar yumshoq loydan yasalgandek bo'rtib chiqadi: ikki tonli
+       yaltiroq gradient (46% da keskin chegara), tepada oq "lab", pastga
+       tushadigan soya. Ustiga borilsa ko'tariladi va yaltiroq nur o'tadi,
+       bosilsa ichkariga botadi.
+       Faqat <html class="puffy"> bo'lganda ishlaydi — Sozlamalardagi
+       "Bo'rtma tugmalar" o'chirilsa, tugmalar avvalgi holiga qaytadi.
+   EN: buttons look like soft inflated clay: two-tone glossy gradient with a
+       hard stop at 46%, a white top lip and a drop shadow. They lift with a
+       sheen on hover and sink when pressed. Active only on <html class="puffy">
+       — turning the setting off restores the original buttons.
+   ===================================================================== */
+
+:root {
+  --pf-gloss: linear-gradient(180deg, #ffffff 0%, #f7faf9 46%, #e9f0ed 46.01%, #dbe6e2 100%);
+  --pf-gloss-down: linear-gradient(180deg, #d9e4e0 0%, #e6eeeb 54%, #f3f7f5 54.01%, #fbfdfc 100%);
+  --pf-mint: linear-gradient(180deg, #c3f0dd 0%, #9fe2c6 46%, #74cfa9 46.01%, #58bd94 100%);
+  --pf-mint-down: linear-gradient(180deg, #52b58c 0%, #69c59f 54%, #95dcbd 54.01%, #b8ebd5 100%);
+  --pf-mint-ink: #0d3b2c;
+  --pf-sunk: #dde6e2;
+
+  --pf-lip: inset 0 1px 0 0 rgb(255 255 255 / 100%), inset 0 -1px 0 0 rgb(20 45 36 / 14%);
+  --pf-lip-mint: inset 0 1px 0 0 rgb(255 255 255 / 80%), inset 0 -1px 0 0 rgb(14 70 50 / 40%);
+  --pf-lift: 0 10px 18px -11px rgb(20 45 36 / 55%), 0 2px 4px -2px rgb(20 45 36 / 16%);
+  --pf-lift-hi: 0 20px 30px -15px rgb(20 45 36 / 55%), 0 5px 9px -4px rgb(20 45 36 / 20%);
+  --pf-lift-mint: 0 12px 20px -11px rgb(40 130 95 / 85%), 0 2px 4px -2px rgb(40 130 95 / 30%);
+  --pf-lift-mint-hi: 0 22px 32px -15px rgb(40 130 95 / 90%), 0 5px 9px -4px rgb(40 130 95 / 38%);
+  --pf-sink: 0 1px 2px -1px rgb(20 45 36 / 30%), inset 0 2px 5px 0 rgb(20 45 36 / 22%);
+  --pf-sink-mint: 0 1px 2px -1px rgb(14 70 50 / 40%), inset 0 2px 6px 0 rgb(10 50 36 / 34%);
+  --pf-well: inset 3px 4px 9px -3px rgb(20 45 36 / 24%), inset -2px -3px 6px 0 rgb(255 255 255 / 85%);
+  --pf-sheen: linear-gradient(100deg, transparent 36%, rgb(255 255 255 / 90%) 48%, transparent 61%);
+  --pf-sheen-soft: linear-gradient(100deg, transparent 36%, rgb(255 255 255 / 50%) 48%, transparent 61%);
+  --pf-ease: cubic-bezier(0.19, 0.86, 0.22, 1);
+}
+
+/* tungi rejim: xuddi shu shakl, qorong'i "loy" */
+html.dark {
+  --pf-gloss: linear-gradient(180deg, #3a4542 0%, #313b38 46%, #283230 46.01%, #222b29 100%);
+  --pf-gloss-down: linear-gradient(180deg, #1d2523 0%, #242d2b 54%, #2d3735 54.01%, #343f3c 100%);
+  --pf-sunk: #1b2321;
+  --pf-lip: inset 0 1px 0 0 rgb(255 255 255 / 16%), inset 0 -1px 0 0 rgb(0 0 0 / 45%);
+  --pf-lift: 0 10px 18px -10px rgb(0 0 0 / 80%), 0 2px 4px -2px rgb(0 0 0 / 50%);
+  --pf-lift-hi: 0 20px 30px -14px rgb(0 0 0 / 85%), 0 5px 9px -4px rgb(0 0 0 / 55%);
+  --pf-sink: 0 1px 2px -1px rgb(0 0 0 / 60%), inset 0 2px 6px 0 rgb(0 0 0 / 55%);
+  --pf-well: inset 3px 4px 9px -3px rgb(0 0 0 / 65%), inset -2px -3px 6px 0 rgb(255 255 255 / 5%);
+  --pf-sheen: linear-gradient(100deg, transparent 36%, rgb(255 255 255 / 22%) 48%, transparent 61%);
+}
+
+/* ---------- oddiy (oq / kulrang) bo'rtma tugmalar ---------- */
+html.puffy :is(.btn-ghost, .icon-btn, .pill, .chip, .sm-pill, .sm-close, .btn-filter, .btn-google,
+  .btn-apply, .contact-item .copy, .chat-tool, .user-btn, .chat-fab, .aw-scroll-ring) {
+  background: var(--pf-sheen) -135% 0 / 240% 100% no-repeat, var(--pf-gloss);
+  border-color: transparent;
+  color: var(--foreground);
+  box-shadow: var(--pf-lift), var(--pf-lip);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: box-shadow 0.24s var(--pf-ease), transform 0.24s var(--pf-ease), background-position 0s, color 0.2s;
+}
+html.puffy :is(.btn-ghost, .icon-btn, .pill, .chip, .sm-pill, .sm-close, .btn-filter, .btn-google,
+  .btn-apply, .contact-item .copy, .chat-tool, .user-btn, .chat-fab):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pf-lift-hi), var(--pf-lip);
+  background-position: 135% 0, 0 0;
+  transition: box-shadow 0.24s var(--pf-ease), transform 0.24s var(--pf-ease), background-position 0.85s var(--pf-ease);
+}
+html.puffy :is(.btn-ghost, .icon-btn, .pill, .chip, .sm-pill, .sm-close, .btn-filter, .btn-google,
+  .btn-apply, .contact-item .copy, .chat-tool, .user-btn, .chat-fab):active {
+  transform: translateY(1px);
+  background: var(--pf-gloss-down);
+  box-shadow: var(--pf-sink);
+}
+
+/* ---------- asosiy / tanlangan — yalpiz rangli bo'rtma ---------- */
+html.puffy :is(.btn-primary, .pill.active, .chip.on, .lang-switch button.active) {
+  background: var(--pf-sheen-soft) -135% 0 / 240% 100% no-repeat, var(--pf-mint);
+  border-color: transparent;
+  color: var(--pf-mint-ink);
+  box-shadow: var(--pf-lift-mint), var(--pf-lip-mint);
+  transition: box-shadow 0.24s var(--pf-ease), transform 0.24s var(--pf-ease), background-position 0s;
+}
+html.puffy :is(.btn-primary, .pill.active, .chip.on):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--pf-lift-mint-hi), var(--pf-lip-mint);
+  background-position: 135% 0, 0 0;
+  transition: box-shadow 0.24s var(--pf-ease), transform 0.24s var(--pf-ease), background-position 0.85s var(--pf-ease);
+}
+html.puffy :is(.btn-primary, .pill.active, .chip.on, .lang-switch button.active):active {
+  transform: translateY(1px);
+  background: var(--pf-mint-down);
+  box-shadow: var(--pf-sink-mint);
+}
+
+/* ---------- tanlov guruhlari (til, valyuta): ichkariga botgan "quduq",
+             faqat tanlangan tugma bo'rtib turadi ---------- */
+html.puffy .lang-switch {
+  background: var(--pf-sunk);
+  border-color: transparent;
+  box-shadow: var(--pf-well);
+  padding: 4px;
+  gap: 2px;
+}
+html.puffy .lang-switch button:not(.active) { background: transparent; box-shadow: none; }
+
+/* ---------- On/Off kalitlar: quduq ichida bo'rtma sharcha ---------- */
+html.puffy .switch .track {
+  background: var(--pf-sunk);
+  box-shadow: var(--pf-well);
+}
+html.puffy .switch .track i {
+  background: var(--pf-gloss);
+  box-shadow: 0 3px 6px -2px rgb(20 45 36 / 45%), var(--pf-lip);
+}
+html.puffy .switch.on .track { background: #74cfa9; box-shadow: inset 0 2px 5px rgb(10 50 36 / 35%); }
+
+/* teginish ekranlarida "hover" ko'tarilishi qolib ketmasin */
+@media (hover: none) {
+  html.puffy :is(.btn-ghost, .icon-btn, .pill, .chip, .sm-pill, .sm-close, .btn-filter, .btn-google,
+    .btn-apply, .contact-item .copy, .chat-tool, .user-btn, .chat-fab, .btn-primary, .pill.active, .chip.on):hover {
+    transform: none;
+    background-position: -135% 0, 0 0;
+  }
+}

@@ -16,6 +16,13 @@ const STRINGS = {
     en: "Turn off on slower devices",
     de: "Auf langsamen Geräten ausschalten",
   },
+  settingsPuffy: { uz: "Bo'rtma tugmalar", ru: "Объёмные кнопки", en: "3D buttons", de: "3D-Schaltflächen" },
+  settingsPuffyHint: {
+    uz: "O'chirilsa tugmalar oddiy holiga qaytadi",
+    ru: "Если выключить — кнопки станут обычными",
+    en: "Turn off to restore the flat buttons",
+    de: "Ausschalten stellt die flachen Buttons wieder her",
+  },
   themeLight: { uz: "Kunduzgi", ru: "Светлая", en: "Light", de: "Hell" },
   themeDark: { uz: "Tungi", ru: "Тёмная", en: "Dark", de: "Dunkel" },
 

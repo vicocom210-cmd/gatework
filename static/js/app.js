@@ -804,6 +804,7 @@ async function renderAll() {
   initContactMenu();
   initSiteMenu();
   initMotionSetting();
+  initPuffySetting();
   if (window.GWChat) GWChat.refresh();
   renderJobs();
 }
@@ -885,6 +886,41 @@ function motionEnabled() {
   }
 }
 window.motionEnabled = motionEnabled;
+
+/* UZ: SOZLAMA — "Bo'rtma tugmalar". Yoqilsa (standart) barcha tugmalar
+       bo'rtib chiqqan "loy" ko'rinishida (puffy.css); o'chirilsa — avvalgi holi.
+   EN: SETTING — "3D buttons". On (default): every button gets the inflated
+       clay look (puffy.css); off: the original buttons. */
+const LS_PUFFY = "gatework-puffy";
+
+function puffyEnabled() {
+  try {
+    return localStorage.getItem(LS_PUFFY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+function applyPuffy(on) {
+  document.documentElement.classList.toggle("puffy", on);
+  document.querySelectorAll("[data-puffy-toggle]").forEach((b) => {
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-checked", on ? "true" : "false");
+  });
+}
+
+function initPuffySetting() {
+  applyPuffy(puffyEnabled());
+  document.querySelectorAll("[data-puffy-toggle]").forEach((b) => {
+    if (b.dataset.bound) return;
+    b.dataset.bound = "1";
+    b.addEventListener("click", () => {
+      const on = !puffyEnabled();
+      try { localStorage.setItem(LS_PUFFY, on ? "on" : "off"); } catch {}
+      applyPuffy(on);
+    });
+  });
+}
 
 function initMotionSetting() {
   applyMotion(motionEnabled());
